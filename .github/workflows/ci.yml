@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, master]
+  # The Build workflow dispatches this after it commits, because its own pushes don't trigger workflows.
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Branch to compare versions against
+        default: master
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Only dev merges into master
+        if: >-
+          github.event_name == 'pull_request' && github.base_ref == 'master' &&
+          (github.head_ref != 'dev' || github.event.pull_request.head.repo.full_name != github.repository)
+        run: |
+          echo "::error::Pull requests into master must come from this repo's dev branch. Retarget this one to dev."
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check bots and privacy
+        env:
+          PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
+          BASE: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base }}
+          TARGET: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        run: |
+          args=()
+          if [ -n "$BASE" ]; then args+=(--base "origin/$BASE"); fi
+          if [ "$TARGET" = master ] || [ "$BASE" = master ]; then args+=(--generated); fi
+          python scripts/catalog.py check "${args[@]}"
+
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

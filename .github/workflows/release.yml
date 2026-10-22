@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tag every bot whose version has no release yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/catalog.py unreleased | while read -r slug version; do
+            python scripts/catalog.py notes "$slug" > notes.md
+            gh release create "$slug-v$version" --target "$GITHUB_SHA" --title "$slug $version" --notes-file notes.md --latest=false < /dev/null
+          done

@@ -1,0 +1,14 @@
+name: Bot idea
+description: Suggest an improvement to a bot, or a new bot.
+labels: [enhancement]
+body:
+  - type: input
+    id: bot
+    attributes:
+      label: Which bot? Leave blank for a new one.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should it do differently, and why?
+    validations:
+      required: true
