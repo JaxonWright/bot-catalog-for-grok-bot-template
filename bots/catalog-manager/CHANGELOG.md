@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- Setting up a catalog now turns on automatic deletion of merged pull request branches.
+
 ## 1.0.1
 
 - Installing or updating a bot now sets its avatar with Grok Bot's built-in default mark, and never generates or uploads a custom picture.
