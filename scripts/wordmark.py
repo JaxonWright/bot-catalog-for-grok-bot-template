@@ -6,7 +6,7 @@ and descenders reach y=13.5. A glyph is its advance width and its centerline pat
 
 import math
 
-from avatars import COLORS, avatar_body
+from avatars import ARTWORK_COLORS, avatar_body
 
 STROKE = 2.6
 GAP = 1.2
@@ -112,7 +112,7 @@ GLYPHS: dict[str, tuple[float, tuple[str, ...]]] = {
 }
 
 
-def bubble_word(text: str, color: str, offset: int) -> tuple[str, float, float | None] | None:
+def bubble_word(text: str, color: str, offset: int, theme: str) -> tuple[str, float, float | None] | None:
     """The word in glyph units with its top-left stroke edge at the origin, its width, and where its first descender starts.
 
     None if a letter has no glyph. offset staggers the animation of each o so they don't blink together.
@@ -130,9 +130,9 @@ def bubble_word(text: str, color: str, offset: int) -> tuple[str, float, float |
             w, h = (width + STROKE) * 60 / 50, (7 + STROKE) * 60 / 50
             parts.append(
                 f'<svg x="{x + width / 2 - w / 2:.2f}" y="{pad + 6.5 - h / 2:.2f}" width="{w:.2f}" height="{h:.2f}" '
-                f'viewBox="0 0 60 60" preserveAspectRatio="none" style="--d: -{(offset + i) * 1.3 % 8:.1f}s">{avatar_body("circle", color)}</svg>'
+                f'viewBox="0 0 60 60" preserveAspectRatio="none" style="--d: -{(offset + i) * 1.3 % 8:.1f}s">{avatar_body("circle", color, theme)}</svg>'
             )
         else:
-            parts.append(f'<path transform="translate({x:.2f} {pad})" d="{" ".join(paths)}" stroke="{COLORS[color]}"/>')
+            parts.append(f'<path transform="translate({x:.2f} {pad})" d="{" ".join(paths)}" stroke="{ARTWORK_COLORS[color]}"/>')
         x += width + STROKE + GAP
     return "".join(parts), x - GAP - pad, descender

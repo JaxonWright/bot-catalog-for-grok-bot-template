@@ -16,4 +16,9 @@
   36%, 90% { transform: scaleY(0.12); }
 }
 @media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
-</style><g class="body"><g fill="#8B5CF6"><rect x="6" y="6" width="48" height="48" rx="15"/></g><g class="look"><rect class="blink" x="20.00" y="22.00" width="7" height="12" rx="3.5" fill="#000000"/><rect class="blink" x="33.00" y="22.00" width="7" height="12" rx="3.5" fill="#000000"/></g></g></svg>
+
+@media (prefers-color-scheme: dark) {
+  .black .skin { fill: #FFFFFF; color: #FFFFFF; }
+  .eye { fill: #000000; }
+}
+</style><g class="body violet"><g class="skin" fill="#8B5CF6" color="#8B5CF6"><path d="M55.00 30.00 L54.96 38.45 L54.83 41.48 L54.62 43.71 L54.32 45.52 L53.93 47.05 L53.45 48.37 L52.88 49.53 L52.21 50.54 L51.43 51.43 L50.54 52.21 L49.53 52.88 L48.37 53.45 L47.05 53.93 L45.52 54.32 L43.71 54.62 L41.48 54.83 L38.45 54.96 L30.00 55.00 L21.55 54.96 L18.52 54.83 L16.29 54.62 L14.48 54.32 L12.95 53.93 L11.63 53.45 L10.47 52.88 L9.46 52.21 L8.57 51.43 L7.79 50.54 L7.12 49.53 L6.55 48.37 L6.07 47.05 L5.68 45.52 L5.38 43.71 L5.17 41.48 L5.04 38.45 L5.00 30.00 L5.04 21.55 L5.17 18.52 L5.38 16.29 L5.68 14.48 L6.07 12.95 L6.55 11.63 L7.12 10.47 L7.79 9.46 L8.57 8.57 L9.46 7.79 L10.47 7.12 L11.63 6.55 L12.95 6.07 L14.48 5.68 L16.29 5.38 L18.52 5.17 L21.55 5.04 L30.00 5.00 L38.45 5.04 L41.48 5.17 L43.71 5.38 L45.52 5.68 L47.05 6.07 L48.37 6.55 L49.53 7.12 L50.54 7.79 L51.43 8.57 L52.21 9.46 L52.88 10.47 L53.45 11.63 L53.93 12.95 L54.32 14.48 L54.62 16.29 L54.83 18.52 L54.96 21.55 Z"/></g><g class="look"><rect class="blink eye" x="20.00" y="22.00" width="7" height="12" rx="3.5" fill="#FFFFFF"/><rect class="blink eye" x="33.00" y="22.00" width="7" height="12" rx="3.5" fill="#FFFFFF"/></g></g></svg>
