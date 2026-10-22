@@ -13,7 +13,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from avatars import COLORS, SHAPES, avatar_body
+from avatars import COLORS, DARK_MODE_STYLE, SHAPES, avatar_body
 from wordmark import STROKE, bubble_word
 
 # The fork check sets CATALOG_ROOT to a pull request's files, so this repository's own copy of the script reads them.
@@ -259,7 +259,7 @@ def render_bundle(catalog: Catalog, bot: Bot) -> str:
     return "\n".join(out) + "\n"
 
 
-AVATAR_STYLE = """
+ANIMATION_STYLE = """
 .body { transform-origin: 30px 30px; animation: breathe 3.2s ease-in-out var(--d, 0s) infinite; }
 .look { animation: look 8s ease-in-out var(--d, 0s) infinite; }
 .blink { transform-box: fill-box; transform-origin: center; animation: blink 8s var(--d, 0s) infinite; }
@@ -278,6 +278,8 @@ AVATAR_STYLE = """
 }
 @media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
 """
+# Each header is drawn for one theme, so only a bot's own avatar follows the viewer's mode.
+AVATAR_STYLE = ANIMATION_STYLE + DARK_MODE_STYLE
 
 
 def render_avatar(shape: str, color: str) -> str:
@@ -291,16 +293,17 @@ def render_avatar(shape: str, color: str) -> str:
 HEADER_GROUP = (
     ("teardrop", "violet", 92, 0, 64, 5.7),
     ("cloud", "orange", 12, 8, 70, 2.1),
-    ("hexagon", "blue", 0, 80, 70, 0.0),
-    ("rounded-square", "green", 106, 86, 66, 1.2),
-    ("circle", "white", 42, 44, 88, 4.3),
+    ("hex", "blue", 0, 80, 70, 0.0),
+    ("squircle", "green", 106, 86, 66, 1.2),
+    # "wordmark" takes the wordmark's color, so this bot is dark in the light header and white in the dark one.
+    ("circle", "wordmark", 42, 44, 88, 4.3),
 )
 HEADER_INK = {"light": "#1F2328", "dark": "#E6EDF3"}
 SANS = "-apple-system, Segoe UI, Helvetica, Arial, sans-serif"
 # Pixels per bubble-letter grid unit, and the distance between stacked words.
 WORDMARK_SCALE = 4.2
 WORDMARK_LINE = 16 * WORDMARK_SCALE
-WORDMARK_COLOR = {"light": "black", "dark": "white"}
+WORDMARK_COLOR = {"light": "ink", "dark": "white"}
 
 
 def render_header(catalog: Catalog, theme: str) -> dict[Path, str]:
@@ -313,7 +316,7 @@ def render_header(catalog: Catalog, theme: str) -> dict[Path, str]:
     rows, row_widths, offset, descender = [], [], 0, None
     for i, word in enumerate(lead.split()):
         top = i * WORDMARK_LINE
-        bubbles = bubble_word(word, WORDMARK_COLOR[theme], offset)
+        bubbles = bubble_word(word, WORDMARK_COLOR[theme], offset, theme)
         if bubbles:
             drawing, width, descender = bubbles
             rows.append(f'<g transform="translate(0 {top:g}) scale({WORDMARK_SCALE})">{drawing}</g>')
@@ -346,12 +349,12 @@ def render_header(catalog: Catalog, theme: str) -> dict[Path, str]:
     width = round(text_x + max(row_widths)) + 12
     avatars = "".join(
         f'<svg x="{x}" y="{y}" width="{size}" height="{size}" viewBox="0 0 60 60" style="--d: -{delay}s">'
-        f"{avatar_body(shape, color)}</svg>"
+        f"{avatar_body(shape, WORDMARK_COLOR[theme] if color == 'wordmark' else color, theme)}</svg>"
         for shape, color, x, y, size, delay in HEADER_GROUP
     )
     logo = (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
-        f'role="img" aria-label="{html.escape(catalog.title)}"><style>{AVATAR_STYLE}</style>'
+        f'role="img" aria-label="{html.escape(catalog.title)}"><style>{ANIMATION_STYLE}</style>'
         f'<g transform="translate(0 {(height - group_height) / 2:g})">{avatars}</g>'
         f'<g transform="translate({text_x} {(height - text_height) / 2:g})" fill="none" stroke-width="{STROKE}" '
         f'stroke-linecap="round" stroke-linejoin="round">{"".join(rows)}</g></svg>\n'
