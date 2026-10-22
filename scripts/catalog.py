@@ -243,7 +243,15 @@ def render_bundle(catalog: Catalog, bot: Bot) -> str:
         "1. Replace your description with the Description block below, word for word.",
         "2. Make your skills match the Skills section. Add or overwrite each one by name, and delete any skill from an older version of this bundle that is no longer listed.",
         "3. Make your routines match the Routines section the same way. Keep any routine the user created themselves.",
-        "4. Keep your memory, logins, and the user's settings.",
+        *(
+            [
+                f"4. Set your avatar with Grok Bot's built-in default mark: shape `{bot.avatar[0]}` and color `{bot.avatar[1]}`. "
+                "Do not generate or upload a custom picture; if one is installed, clear it."
+            ]
+            if bot.avatar
+            else []
+        ),
+        f"{5 if bot.avatar else 4}. Keep your memory, logins, and the user's settings.",
         "",
         "## Description",
         "",
