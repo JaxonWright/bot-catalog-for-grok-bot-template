@@ -1,0 +1,67 @@
+name: Set up catalog
+
+# Runs only when started by hand. A push trigger would rerun it after a rename and reset the license and byline.
+on:
+  workflow_dispatch:
+    inputs:
+      author:
+        description: How to credit you (your name, X handle, or GitHub username). Blank uses your GitHub name.
+      author_url:
+        description: Where your name links to. Blank uses your GitHub profile.
+      bots_license:
+        description: License for your bots. The template's own scripts and docs stay GPL-3.0.
+        type: choice
+        options: [GPL-3.0, MIT, Apache-2.0, CC0-1.0]
+        default: GPL-3.0
+
+permissions:
+  contents: write
+
+concurrency:
+  group: setup
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Point the catalog at this repository and credit its owner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          AUTHOR: ${{ inputs.author }}
+          AUTHOR_URL: ${{ inputs.author_url }}
+          BOTS_LICENSE: ${{ inputs.bots_license || 'GPL-3.0' }}
+        run: |
+          template_repo=$(python -c "import tomllib; print(tomllib.load(open('catalog.toml', 'rb'))['template_repo'])")
+          if [ "$template_repo" = "$GITHUB_REPOSITORY" ]; then
+            echo "::error::This is the template itself. Run Set up catalog in a repository made from it."
+            exit 1
+          fi
+          author=${AUTHOR:-$(gh api "users/$OWNER" --jq '.name // .login')}
+          author_url=${AUTHOR_URL:-https://github.com/$OWNER}
+          if [ "$BOTS_LICENSE" = GPL-3.0 ]; then
+            rm -f LICENSE-BOTS
+          else
+            gh api "licenses/$BOTS_LICENSE" --jq .body > LICENSE-BOTS
+            HOLDER="$author" python -c "import datetime, os, pathlib; p = pathlib.Path('LICENSE-BOTS'); p.write_text(p.read_text().replace('[year]', str(datetime.date.today().year)).replace('[fullname]', os.environ['HOLDER']))"
+          fi
+          python scripts/catalog.py configure --repo "$GITHUB_REPOSITORY" --author "$author" --author-url "$author_url" \
+            --template false --bots-license "$BOTS_LICENSE"
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Set up the catalog for $GITHUB_REPOSITORY"
+            git push origin HEAD:master
+          fi
+          if ! git push origin HEAD:refs/heads/dev; then
+            echo "::warning::dev has changes that master doesn't. Merge master into dev so dev uses these settings."
+          fi

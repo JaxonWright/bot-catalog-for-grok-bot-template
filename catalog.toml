@@ -1,0 +1,16 @@
+# The "Set up catalog" workflow fills in repo, author, and author_url in your copy of the template.
+repo = "JaxonWright/bot-catalog-for-grok-bot-template"
+title = "Bot Catalog for Grok Bot"
+# Shown as "<author>’s" above the README header, and as "<name>’s" while blank. Use your name, X handle, or GitHub username.
+author = ""
+author_url = ""
+# Shows the README note that this repo is a template. The "Set up catalog" workflow turns it off in your copy.
+template = true
+# The template every catalog starts from. "Make Your Own Catalog" points here.
+template_repo = "JaxonWright/bot-catalog-for-grok-bot-template"
+# Files the template owns. The Catalog Manager copies these from the template to keep a catalog current.
+template_paths = [".github/", ".githooks/", "scripts/", "catalog/", "docs/", "assets/add-grok-bot.svg", "CONTRIBUTING.md", "SECURITY.md", ".gitignore"]
+# License for the bots in bots/. Anything other than GPL-3.0 needs its text in LICENSE-BOTS. The template's own files stay GPL-3.0.
+bots_license = "GPL-3.0"
+release_branch = "master"
+dev_branch = "dev"

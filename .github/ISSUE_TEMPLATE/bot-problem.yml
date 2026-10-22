@@ -1,0 +1,19 @@
+name: Bot problem
+description: A bot did something wrong or confusing.
+labels: [bug]
+body:
+  - type: input
+    id: bot
+    attributes:
+      label: Which bot and version?
+      description: The version is in the `catalog` block at the top of the bot's description.
+      placeholder: inbox-triage 1.2.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Leave out anything private from your conversation.
+    validations:
+      required: true

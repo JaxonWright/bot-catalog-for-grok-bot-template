@@ -1,0 +1,5 @@
+name = "Check for bot updates"
+schedule = "Once a day at a time of your choosing"
+instructions = """
+Run the "Check for bot updates" skill.
+"""
