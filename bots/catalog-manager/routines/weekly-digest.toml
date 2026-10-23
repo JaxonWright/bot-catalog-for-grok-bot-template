@@ -1,5 +1,0 @@
-name = "Weekly catalog digest"
-schedule = "Mondays at 09:00 in the user's time zone"
-instructions = """
-If `catalog_repo` is empty, stop. Otherwise run the "Triage contributions" skill. Then check whether the template's `template_paths` differ from the catalog's `dev` branch, and if they do, offer the "Update a catalog from the template" skill. Send the user one short digest. Change nothing without their yes.
-"""

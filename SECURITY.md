@@ -12,7 +12,7 @@ Please don't open a public issue for a security problem. Use **Security > Report
 
 Anyone who can push to a catalog's `master` branch can change what every installed copy of its bots is told to do, through an update. That includes an attacker who takes over a maintainer's GitHub account.
 
-- **Handled.** An installed bot never updates on its own. It shows its user the changelog and a link to the full diff, and updates only after a yes. `master` only changes through a pull request from `dev` that passes CI and merges with a merge commit. Release tags can't be moved or deleted, and the update check reads the changelog and bundle from the release tag itself, so what a user reviews is exactly what they install.
+- **Handled.** An installed bot never updates on its own. It shows its user the changelog and a link to the full diff, and updates only after a yes. `master` only changes through a pull request that passes CI and merges with a merge commit. Release tags can't be moved or deleted, and the update check reads the changelog and bundle from the release tag itself, so what a user reviews is exactly what they install.
 - **You accept.** If you approve an update without reading it, you are trusting the catalog's maintainer and their account security. Maintainers should use a hardware key or passkey for GitHub two-factor sign-in.
 - **To opt out.** Tell any installed bot to turn automatic update checks off. It keeps its current version until you turn them back on.
 
@@ -34,7 +34,7 @@ Anyone can propose changes to a bot. A change could quietly tell the bot to send
 
 A bot's `share_url` decides which bot the README's **Add Grok Bot** button installs. Pointing it at a look-alike bot would be easy to miss in review.
 
-- **Handled.** The Fork check workflow rejects any change to a `share_url` in a pull request from a fork. It runs this repository's own copy of the check and only reads the fork's files, so the pull request can't switch it off. CI accepts only Grok Bot share links (`https://x.ai/bot/...`), so the button can't lead to another website. The README shows each bot's name and summary as plain text, so a summary can't add a second button or link. The Catalog Manager's triage calls out any `share_url` change.
+- **Handled.** The Fork check workflow rejects any change to a `share_url` in a pull request from a fork. It runs this repository's own copy of the check and only reads the fork's files, so the pull request can't switch it off. A new bot can't merge until the catalog's owner publishes it and adds the link, and the Catalog Manager never asks anyone else for one. CI accepts only Grok Bot share links (`https://x.ai/bot/...`), so the button can't lead to another website. The README shows each bot's name and summary as plain text, so a summary can't add a second button or link. The Catalog Manager's triage calls out any `share_url` change.
 - **You accept.** A maintainer can still change it, so the button is only as trustworthy as the catalog's maintainers.
 
 ### Personal details published by mistake
@@ -60,8 +60,8 @@ The Catalog Manager reads text written by strangers, such as issues, pull reques
 
 ### Workflow permissions
 
-- **Handled.** CI runs on pull requests with a read-only token, and pull requests from forks get no secrets. The Fork check reads a fork's files but never runs them. Set up catalog runs only when someone starts it by hand. Release creates tags only after a merge into `master`. Build commits generated files to `dev` after each push to `dev`.
-- **You accept.** Anyone with write access can push to `dev` without a pull request, and code on `dev` runs in the Build workflow with write access. Review changes to `scripts/` and `.github/` with extra care.
+- **Handled.** CI runs on pull requests with a read-only token, and pull requests from forks get no secrets. The Fork check reads a fork's files but never runs them. Set up catalog runs only when someone starts it by hand. Release creates tags only after a merge into `master`. Build commits generated files to pull request branches in the repository, never to a fork.
+- **You accept.** Anyone with write access can push a branch, and code on a pull request branch in the repository runs in the Build workflow with write access. Review changes to `scripts/` and `.github/` with extra care. The Catalog Manager moves a fork's pull request into the repository only when it changes nothing outside `bots/`.
 
 ### Updates have no signatures
 
