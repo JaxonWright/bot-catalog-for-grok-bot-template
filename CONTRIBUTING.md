@@ -5,7 +5,7 @@ Thanks for helping improve these bots.
 ## Pull requests
 
 - Open every pull request against `master`. It is the released catalog, and merging into it releases each bot whose version changed.
-- Change one bot per pull request. CI rejects a pull request that changes more than one, except a change to `catalog/` or `scripts/`, which bumps every bot at once.
+- Change one bot per pull request. Other bots may change only their version, changelog, and `avatar.svg`, as when a change to `catalog/` bumps every bot at once.
 - For a new bot, leave `share_url` empty. The catalog's owner publishes the bot from your pull request and adds the link before merging, so CI reports it as missing until then.
 
 ## Changing a bot
@@ -33,7 +33,7 @@ If you work from a clone, `scripts/install-hooks.sh` adds a pre-commit hook. It 
 
 ## Keep it generic
 
-Everything here is public, and every copy of a bot reads it. Anything pushed, including branches, commits, and pull request text, is public right away and stays in history even if deleted later. CI checks after the push, so it can't take a leak back. Check your files before you push. Never commit names, email addresses, account handles, addresses, internal links, or keys. If a bot needs something personal, have it ask the user once and remember the answer. The check rejects common patterns. Maintainers can also list their own personal strings in `.private-denylist` (git-ignored) and in the `PRIVATE_DENYLIST` repository secret. Each entry matches whole words only. CI logs are public, so a `PRIVATE_DENYLIST` match doesn't say where it is. Find it with the same entries in `.private-denylist`. An entry with a capital letter matches that exact case, and an all-lowercase entry matches any case.
+Everything here is public, and every copy of a bot reads it. Anything pushed, including branches, commits, and pull request text, is public right away and stays in history even if deleted later. CI checks after the push, so it can't take a leak back. Check your files before you push. CI checks every line and commit message a pull request adds, not only its final files, and on a pull request from this repository it rejects commit emails that aren't GitHub `noreply` addresses. Commit with the one at https://github.com/settings/emails. Never commit names, email addresses, account handles, addresses, internal links, or keys. If a bot needs something personal, have it ask the user once and remember the answer. The check rejects common patterns. Maintainers can also list their own personal strings in `.private-denylist` (git-ignored) and in the `PRIVATE_DENYLIST` repository secret. Each entry matches whole words only. CI logs are public, so a `PRIVATE_DENYLIST` match doesn't say where it is. Find it with the same entries in `.private-denylist`. An entry with a capital letter matches that exact case, and an all-lowercase entry matches any case.
 
 Only the maintainers change `share_url`, because it decides which bot the README's **Add Grok Bot** button installs. The Fork check rejects a change to it from a fork, using this repository's own copy of the check. CI also warns about every new link in a bot's files, so reviewers can check where it points.
 

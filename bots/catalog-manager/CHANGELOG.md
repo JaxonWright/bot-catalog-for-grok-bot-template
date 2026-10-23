@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+- Updating your catalog from the template deletes only the files the template removed, never workflows or other files you added yourself.
+- The daily "Check the catalog" routine remembers where it left off only after it has told you what's new, so nothing is skipped if a check stops partway.
+- Setting up a catalog also makes workflow runs from outside contributors wait for approval, and the Catalog Manager never approves them.
+
 ## 1.1.1
 
 - It moves a pull request from a fork into your catalog only when the Fork check passed, so a moved pull request changes nothing outside `bots/` and never sets a share link.

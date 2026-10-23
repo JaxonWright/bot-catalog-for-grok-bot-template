@@ -1,5 +1,5 @@
 name = "Catalog Manager"
-version = "1.1.1"
+version = "1.1.2"
 summary = "Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template."
 avatar = { shape = "squircle", color = "violet" }
 # Lives only in the template. The "Set up catalog" workflow removes it from every catalog made from the template,
