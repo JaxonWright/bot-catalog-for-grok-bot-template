@@ -17,8 +17,11 @@ jobs:
       # The branch a pull request or a run dispatched by Build merges into. Empty on a push to master.
       BASE: ${{ github.event_name == 'pull_request' && github.base_ref || github.event_name == 'workflow_dispatch' && 'master' || '' }}
     steps:
+      # The pull request's own commits, not the merge commit GitHub makes to test it, which carries the
+      # account's email and never lands in history. master requires branches to be up to date, so they match.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
