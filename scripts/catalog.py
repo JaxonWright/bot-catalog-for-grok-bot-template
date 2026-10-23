@@ -291,7 +291,8 @@ def share_url_problems(base: str, bots: list[Bot]) -> list[str]:
 
 
 def changed_paths(base: str) -> list[str]:
-    return git("diff", "--name-only", f"{base}...HEAD").split()
+    # Without renames, a moved file counts at both its old and new path.
+    return git("diff", "--name-only", "--no-renames", f"{base}...HEAD").split()
 
 
 def fork_path_problems(base: str, outputs: dict[Path, str]) -> list[str]:
@@ -322,13 +323,28 @@ def tag_problems(branch: str) -> list[str]:
     return problems
 
 
-def scope_problems(base: str) -> list[str]:
+def scope_problems(base: str, since: str) -> list[str]:
+    """One bot per pull request. Others may only bump their version, as a change to every bundle makes them."""
     paths = changed_paths(base)
     slugs = sorted({p.split("/")[1] for p in paths if p.startswith("bots/") and p.count("/") >= 2})
-    # A change to the shared update check or scripts bumps every bot at once.
-    if len(slugs) > 1 and not any(p.startswith(("catalog/", "scripts/")) for p in paths):
-        return [f"this pull request changes {len(slugs)} bots ({', '.join(slugs)}). Split it into one pull request per bot"]
+    changed = [slug for slug in slugs if not only_bumped(since, slug, paths)]
+    if len(changed) > 1:
+        return [
+            f"this pull request changes {len(changed)} bots ({', '.join(changed)}). Split it into one pull request per bot. "
+            "Other bots may change only their version, changelog, and avatar.svg"
+        ]
     return []
+
+
+def only_bumped(since: str, slug: str, paths: list[str]) -> bool:
+    files = {p.removeprefix(f"bots/{slug}/") for p in paths if p.startswith(f"bots/{slug}/")}
+    if not files <= {"bot.toml", "CHANGELOG.md", AVATAR_FILE}:
+        return False
+    old, new = text_at(since, f"bots/{slug}/bot.toml"), BOTS / slug / "bot.toml"
+    if not old or not new.exists():
+        return False
+    without_version = lambda text: {k: v for k, v in tomllib.loads(text).items() if k != "version"}
+    return without_version(old) == without_version(new.read_text())
 
 
 def unpublished_problems(base: str, bots: list[Bot]) -> list[str]:
@@ -480,7 +496,7 @@ def cmd_check(args) -> int:
     if args.base:
         # Compare with where the branch started, so changes merged into master since then don't count as this one's.
         since = git("merge-base", args.base, "HEAD").strip()
-        problems += scope_problems(args.base) + unpublished_problems(since, bots)
+        problems += scope_problems(args.base, since) + unpublished_problems(since, bots)
         found, email_problems, hit = history_problems(privacy, since, {str(p.relative_to(ROOT)) for p in outputs})
         problems, secret_hit = problems + found, secret_hit or hit
         if args.fork:
