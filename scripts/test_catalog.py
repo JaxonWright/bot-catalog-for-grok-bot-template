@@ -373,6 +373,17 @@ class CatalogTest(unittest.TestCase):
         code, output = self.run_script("check")
         self.assertIn("possible API key", output)
 
+    def test_an_older_readme_gets_the_improve_section_in_place(self):
+        readme = self.root / "README.md"
+        text = readme.read_text().replace("<!-- improve:start -->\n", "").replace("<!-- improve:end -->\n", "")
+        readme.write_text(text.replace("[suggest it]", "[suggest it, or a new bot]", 1))
+        code, output = self.run_script("build")
+        self.assertEqual(code, 0, output)
+        text = readme.read_text()
+        self.assertEqual(text.count("## Improve a Bot"), 1)
+        self.assertNotIn("or a new bot", text)
+        self.assertLess(text.index("<!-- improve:end -->"), text.index("## Make Your Own Catalog"))
+
 
 if __name__ == "__main__":
     unittest.main()

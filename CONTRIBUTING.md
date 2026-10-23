@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve these bots. This catalog holds its owner's bots, so a pull request from a fork can suggest changes to a bot that's already here, but can't add a new one. To suggest a new bot, open a **Bot idea** issue.
+Thanks for helping improve these bots. This catalog holds its owner's bots, so a pull request from a fork can suggest changes to a bot that's already here, but can't add a new one. To suggest a new bot, open a **Bot idea** issue, or [make your own catalog](README.md#make-your-own-catalog) and share it from there.
 
 ## Pull requests
 
