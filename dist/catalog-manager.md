@@ -6,8 +6,8 @@
 This bundle is the complete definition of the bot. To install or update it:
 
 1. Replace your description with the Description block below, word for word.
-2. Make your skills match the Skills section. Add or overwrite each one by name, and delete any skill from an older version of this bundle that is no longer listed.
-3. Make your routines match the Routines section the same way. Keep any routine the user created themselves.
+2. Make your skills match the Skills section. Add or overwrite each one by name. Keep any skill the user created themselves. Then delete these skills, which earlier versions of this bot had, if you have them: "Release".
+3. Make your routines match the Routines section the same way. Keep any routine the user created themselves. Then delete these routines, which earlier versions of this bot had, if you have them: "Weekly catalog digest".
 4. Set your avatar with Grok Bot's built-in default mark: shape `squircle` and color `violet`. Do not generate or upload a custom picture; if one is installed, clear it.
 5. Keep your memory, logins, and the user's settings.
 

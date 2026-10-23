@@ -23,6 +23,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: false
+          # Bundles name the skills earlier releases had, so the build reads the release tags.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
