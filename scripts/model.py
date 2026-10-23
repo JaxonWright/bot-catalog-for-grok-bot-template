@@ -12,6 +12,8 @@ TEMPLATES = ROOT / "catalog"
 DIST = ROOT / "dist"
 README = ROOT / "README.md"
 AVATAR_FILE = "avatar.svg"
+# Every file the template owns. Catalogs keep the template's copy, so an update can tell which files the template removed.
+TEMPLATE_FILES = ROOT / ".github" / "template-files.txt"
 PROMPTS = ROOT / "docs" / "prompts"
 
 BOT_LICENSES = {

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from avatars import COLORS, SHAPES, render_avatar
 from model import (
-    AVATAR_FILE, BOT_LICENSES, BOTS, DIST, README, ROOT, TEMPLATES, Bot, Catalog, Invalid, Routine, fence, substitute,
+    AVATAR_FILE, BOT_LICENSES, BOTS, DIST, README, ROOT, TEMPLATE_FILES, TEMPLATES, Bot, Catalog, Invalid, Routine, fence, substitute,
 )
 from readme import HEADER_INK, render_header, render_readme
 
@@ -233,7 +233,18 @@ def expected_outputs(catalog: Catalog, bots: list[Bot]) -> dict[Path, str]:
         outputs |= render_header(catalog, theme)
     outputs |= {DIST / f"{bot.slug}.md": render_bundle(catalog, bot) for bot in bots}
     outputs |= {BOTS / bot.slug / AVATAR_FILE: render_avatar(*bot.avatar) for bot in bots if bot.avatar}
+    if catalog.template:
+        outputs[TEMPLATE_FILES] = render_template_files(catalog)
     return outputs
+
+
+def render_template_files(catalog: Catalog) -> str:
+    owned = set(git("ls-files", "--", *catalog.template_paths).splitlines()) | {str(TEMPLATE_FILES.relative_to(ROOT))}
+    return (
+        "# The files the template owns, written by scripts/catalog.py build in the template. Don't edit it.\n"
+        "# Updating a catalog from the template deletes each file in its old copy of this list that the new copy drops.\n"
+        + "".join(f"{path}\n" for path in sorted(owned))
+    )
 
 
 def git(*args: str) -> str:

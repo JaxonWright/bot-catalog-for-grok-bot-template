@@ -29,6 +29,8 @@ class CatalogTest(unittest.TestCase):
             (shutil.copytree if source.is_dir() else shutil.copy)(source, self.root / name)
         self.git("init", "-q", "-b", "master")
         self.commit("base")
+        self.run_script("build")
+        self.commit("build")
         self.git("tag", "catalog-manager-v" + self.version())
         self.git("switch", "-q", "-c", "change")
 
