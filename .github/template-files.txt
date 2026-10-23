@@ -20,6 +20,7 @@ catalog/description-header.md
 catalog/readme/create.md
 catalog/readme/guide-catalog.md
 catalog/readme/guide-template.md
+catalog/readme/improve.md
 catalog/readme/license-gpl.md
 catalog/readme/license-other.md
 catalog/readme/maintain.md

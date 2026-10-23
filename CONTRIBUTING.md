@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for helping improve these bots.
+Thanks for helping improve these bots. This catalog holds its owner's bots, so a pull request from a fork can suggest changes to a bot that's already here, but can't add a new one. To suggest a new bot, open a **Bot idea** issue, or [make your own catalog](README.md#make-your-own-catalog) and share it from there.
 
 ## Pull requests
 
 - Open every pull request against `master`. It is the released catalog, and merging into it releases each bot whose version changed.
 - Change one bot per pull request. Other bots may change only their version, changelog, and `avatar.svg`, as when a change to `catalog/` bumps every bot at once.
-- For a new bot, leave `share_url` empty. The catalog's owner publishes the bot from your pull request and adds the link before merging, so CI reports it as missing until then.
+- The owner adds new bots themselves, from a branch in this repository. A new bot can't merge until they publish it and add its `share_url`.
 
 ## Changing a bot
 
@@ -27,7 +27,7 @@ Set `avatar.shape` and `avatar.color` to the shape and color the bot has in Grok
 
 Any change to a bot needs a version bump in `bot.toml` and a matching changelog section. Write the changelog for the person deciding whether to update. Say what changes for them, and call out any new skill, routine, or permission.
 
-Change only the files in the table above, apart from `avatar.svg`. You don't need to run anything. On a pull request from a branch in this repository, the Build workflow regenerates the README table, the avatar, and the install bundle in `dist/`. A fork's branch can't be pushed to, so a maintainer moves a fork's pull request into a branch here, keeping your commits and credit. A pull request from a fork can change only files in `bots/`, and each must be a regular file, not a symlink.
+Change only the files in the table above, apart from `avatar.svg`. You don't need to run anything. On a pull request from a branch in this repository, the Build workflow regenerates the README table, the avatar, and the install bundle in `dist/`. A fork's branch can't be pushed to, so a maintainer moves a fork's pull request into a branch here, keeping your commits and credit. A pull request from a fork can change only the files of bots already in `bots/`, and each must be a regular file, not a symlink.
 
 If you work from a clone, `scripts/install-hooks.sh` adds a pre-commit hook. It runs the same validation and privacy check as CI before anything leaves your machine.
 

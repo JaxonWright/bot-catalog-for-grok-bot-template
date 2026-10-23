@@ -23,17 +23,21 @@
 <!-- bots:start -->
 <table>
 <tr><th width="122"></th><th>Bot</th><th>Description</th><th width="190"></th></tr>
-<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.1.2</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
+<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.1.3</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
 </table>
 <!-- bots:end -->
 
 ## Improve a Bot
 
-When a bot here gets a fix, everyone who added it is offered the update within a day. So if one gets something wrong, [report it](../../issues/new?template=bot-problem.yml). If you wish a bot did something it doesn't, or you want one that isn't here yet, [suggest it](../../issues/new?template=bot-idea.yml).
+<!-- improve:start -->
+When a bot here gets a fix, everyone who added it is offered the update within a day. So if one gets something wrong, [report it](../../issues/new?template=bot-problem.yml). If you wish a bot did something it doesn't, [suggest it](../../issues/new?template=bot-idea.yml).
 
 You can also make the change yourself. Each bot is a folder of plain text files in [`bots/`](bots), and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to send a pull request.
 
+Only this catalog's owner adds new bots to it. You can [suggest one](../../issues/new?template=bot-idea.yml), but if you have a bot of your own in mind, you might as well [make your own catalog](#make-your-own-catalog) and share it from there.
+
 If you find a security problem, please don't post it in an issue, since issues are public. [SECURITY.md](SECURITY.md#reporting-a-problem) explains how to report it privately.
+<!-- improve:end -->
 
 ## Make Your Own Catalog
 
@@ -47,11 +51,11 @@ Add the **Catalog Manager** from the table above, then tell it *Set up my catalo
 ```text
 Set up my own Bot Catalog for Grok Bot on GitHub. Use the GitHub connector. If it isn't connected, ask me to connect GitHub under Connect apps and wait. Use my GitHub account in your browser only for steps the connector can't do.
 
-1. Ask me how I want to be credited on the catalog (my name, X handle, or GitHub username) and which link my name should go to. Ask me which license my bots should use: GPL-3.0, MIT, Apache-2.0, or CC0-1.0. Explain that GPL-3.0 keeps changed copies open, MIT and Apache-2.0 let anyone reuse them with credit, and CC0-1.0 puts them in the public domain. The template's own scripts and docs stay GPL-3.0 either way. Ask me for the personal details that must never be published: my names, email addresses, handles, phone numbers, street address, employer, and anything else I name. Keep that list private. Never write it anywhere except the secret in step 5.
+1. Ask me how I want to be credited on the catalog (my name, X handle, or GitHub username) and which link my name should go to. Ask me which license my bots should use: GPL-3.0, MIT, Apache-2.0, or CC0-1.0. Explain that GPL-3.0 keeps changed copies open, MIT and Apache-2.0 let anyone reuse them with credit, and CC0-1.0 puts them in the public domain. The template's own scripts and docs stay GPL-3.0 either way. Ask me for the personal details that must never be published: my names, email addresses, handles, phone numbers, street address, employer, and anything else I name. Keep that list private, and never write it anywhere except the secret in step 5 if I choose to add it.
 2. Create a new repository from the template https://github.com/JaxonWright/bot-catalog-for-grok-bot-template. In the browser, that is "Use this template", then "Create a new repository". Name it `bot-catalog-for-grok-bot`, make it Public, and create it.
 3. In the new repository, enable GitHub Actions if it is off, and run the "Set up catalog" workflow on the `master` branch with my credit, link, and license from step 1 as its inputs. Wait until the run finishes with a green check.
 4. Protect the repository by adding the two rulesets in its `.github/rulesets/` folder, `protect-master.json` and `protect-release-tags.json`, exactly as written. In the browser, that is Settings, then Rules, then Rulesets, then "New ruleset", then "Import a ruleset", once for each file. Then turn on private vulnerability reporting, which in the browser is Settings, then Security, then "Private vulnerability reporting". Then turn on automatic deletion of merged branches, which in the browser is Settings, then General, then "Automatically delete head branches". Then make workflow runs from outside contributors wait for approval, which in the browser is Settings, then Actions, then General, then "Require approval for all external contributors".
-5. Add a repository secret named `PRIVATE_DENYLIST` that holds my private details from step 1, one per line. In the browser, that is Settings, then Secrets and variables, then Actions.
+5. Offer to add my private details from step 1 as a repository secret named `PRIVATE_DENYLIST`, so CI also rejects any file that contains one. First tell me who has write access to the repository (currently, for example "only you"), because anyone with write access can read the secret through a workflow on a branch of their own. Suggest leaving it out, since you remove my personal details before anything is pushed and I see every file first. Add it only if I want it, one detail per line. In the browser, that is Settings, then Secrets and variables, then Actions.
 6. Tell me the repository link, and that its README's "Maintain This Catalog" section has the next steps for sharing my bots.
 ```
 
@@ -87,7 +91,7 @@ If any check fails, show me the error and how you would fix it, and wait.
 
 </details>
 
-Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.
+Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. Other people can suggest changes to your bots, but only you add bots to your catalog.
 
 ### 3. Keep Up With the Template
 

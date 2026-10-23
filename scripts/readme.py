@@ -1,6 +1,7 @@
 """The README: its header art, bot table, and the generated sections between its marker comments."""
 
 import html
+import re
 from pathlib import Path
 
 from avatars import ANIMATION_STYLE, INK, avatar_body
@@ -13,6 +14,8 @@ LICENSE_START = "<!-- license:start -->"
 LICENSE_END = "<!-- license:end -->"
 MAINTAIN_START = "<!-- maintain:start -->"
 MAINTAIN_END = "<!-- maintain:end -->"
+IMPROVE_START = "<!-- improve:start -->"
+IMPROVE_END = "<!-- improve:end -->"
 GUIDE_START = "<!-- guide:start -->"
 GUIDE_END = "<!-- guide:end -->"
 PLACEHOLDER_REPO = "YOUR-USER/bot-catalog-for-grok-bot"
@@ -155,18 +158,28 @@ def render_table(catalog: Catalog, bots: list[Bot]) -> str:
     return "\n".join(rows)
 
 
-def replace_between(text: str, start_marker: str, end_marker: str, body: str) -> str:
-    # A catalog made before the template added a section has no markers for it yet, so they go at the end.
+def replace_between(text: str, start_marker: str, end_marker: str, body: str, heading: str | None = None) -> str:
+    """Replaces what sits between the markers with body.
+
+    A catalog made before the template generated a section has no markers for it yet. If it has the section's
+    heading, the markers go around the text under that heading, which the template wrote. Otherwise they go at the end.
+    """
     if start_marker not in text or end_marker not in text:
-        text = f"{text.rstrip()}\n\n{start_marker}\n{end_marker}\n"
+        found = re.search(rf"^{re.escape(heading)}\n\n(.*?)(?=^## |\Z)", text, re.M | re.S) if heading else None
+        if found:
+            text = f"{text[:found.start(1)]}{start_marker}\n{end_marker}\n\n{text[found.end(1):]}"
+        else:
+            text = f"{text.rstrip()}\n\n{start_marker}\n{end_marker}\n"
     start, end = text.index(start_marker) + len(start_marker), text.index(end_marker)
     inner = f"\n{body}\n" if body else "\n"
     return f"{text[:start]}{inner}{text[end:]}"
 
 
-def render_readme(catalog: Catalog, bots: list[Bot]) -> str:
-    text = replace_between(README.read_text(), HEADER_START, HEADER_END, render_byline(catalog))
+def render_readme(catalog: Catalog, bots: list[Bot], readme: str | None = None) -> str:
+    """Fills the generated sections of readme, the README.md on disk by default. Everything else stays as written."""
+    text = replace_between(README.read_text() if readme is None else readme, HEADER_START, HEADER_END, render_byline(catalog))
     text = replace_between(text, NOTE_START, NOTE_END, prose("template-note") if catalog.template else "")
+    text = replace_between(text, IMPROVE_START, IMPROVE_END, prose("improve"), heading="## Improve a Bot")
     text = replace_between(text, GUIDE_START, GUIDE_END, render_guide(catalog))
     text = replace_between(text, MAINTAIN_START, MAINTAIN_END, render_maintain(catalog))
     text = replace_between(text, LICENSE_START, LICENSE_END, render_license(catalog))
