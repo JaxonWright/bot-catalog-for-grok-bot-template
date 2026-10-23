@@ -457,23 +457,10 @@ def privacy_problems(privacy: Privacy) -> tuple[list[str], bool]:
     return problems, secret_hit
 
 
-def public_email(address: str) -> bool:
-    allowed = {e.strip().lower() for e in re.split(r"[\s,]+", os.environ.get("PUBLIC_EMAILS", "")) if e.strip()}
-    address = address.lower()
-    return address.endswith("@users.noreply.github.com") or address == "noreply@github.com" or address in allowed
-
-
-def history_problems(privacy: Privacy, since: str, generated: set[str]) -> tuple[list[str], list[str], bool]:
+def history_problems(privacy: Privacy, since: str, generated: set[str]) -> tuple[list[str], bool]:
     """Every commit a pull request adds stays in master's history once it merges, even one a later commit undid."""
-    problems, email_problems, secret_hit = [], [], False
-    for line in git("log", "--format=%H%x09%ae%x09%ce", f"{since}..HEAD").splitlines():
-        sha, *emails = line.split("\t")
-        for kind, address in zip(("author", "committer"), emails):
-            if not public_email(address):
-                email_problems.append(
-                    f"commit {sha[:7]}: its {kind} email isn't a GitHub noreply address. Commit with the noreply address "
-                    "from https://github.com/settings/emails, or add the address to the PUBLIC_EMAILS repository variable"
-                )
+    problems, secret_hit = [], False
+    for sha in git("log", "--format=%H", f"{since}..HEAD").split():
         found, hit = privacy.scan(git("log", "-1", "--format=%B", sha).splitlines(), f"commit {sha[:7]} message")
         problems, secret_hit = problems + found, secret_hit or hit
     log = git("log", "--no-merges", "--no-renames", "-p", "--unified=0", "--format=%x00%h", f"{since}..HEAD")
@@ -487,7 +474,7 @@ def history_problems(privacy: Privacy, since: str, generated: set[str]) -> tuple
         for path, lines in added.items():
             found, hit = privacy.scan(lines, f"commit {sha} {path} added line")
             problems, secret_hit = problems + found, secret_hit or hit
-    return problems, email_problems, secret_hit
+    return problems, secret_hit
 
 
 def cmd_build(_args) -> int:
@@ -536,15 +523,10 @@ def cmd_check(args) -> int:
         # Compare with where the branch started, so changes merged into master since then don't count as this one's.
         since = git("merge-base", args.base, "HEAD").strip()
         problems += scope_problems(args.base, since) + unpublished_problems(since, bots)
-        found, email_problems, hit = history_problems(privacy, since, {str(p.relative_to(ROOT)) for p in outputs})
+        found, hit = history_problems(privacy, since, {str(p.relative_to(ROOT)) for p in outputs})
         problems, secret_hit = problems + found, secret_hit or hit
         if args.fork:
-            # A contributor's email is theirs to share, so it's only a warning.
-            for problem in email_problems:
-                warn(problem)
             problems += fork_path_problems(args.base, outputs) + share_url_problems(since, bots)
-        else:
-            problems += email_problems
         for path, url in new_links(since, bots):
             warn(f"{path}: new link {url}. Make sure it belongs here before merging", path)
     if secret_hit:

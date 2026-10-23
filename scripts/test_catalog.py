@@ -48,13 +48,13 @@ class CatalogTest(unittest.TestCase):
     def version(self):
         return next(line.split('"')[1] for line in (self.root / "bots/catalog-manager/bot.toml").read_text().splitlines() if line.startswith("version"))
 
-    def run_script(self, *args, denylist="", public_emails=""):
-        env = os.environ | {"CATALOG_ROOT": str(self.root), "PRIVATE_DENYLIST": denylist, "PUBLIC_EMAILS": public_emails}
+    def run_script(self, *args, denylist=""):
+        env = os.environ | {"CATALOG_ROOT": str(self.root), "PRIVATE_DENYLIST": denylist}
         result = subprocess.run([sys.executable, str(SCRIPT), *args], env=env, capture_output=True, text=True)
         return result.returncode, result.stdout + result.stderr
 
-    def check(self, denylist="", public_emails=""):
-        return self.run_script("check", "--generated", "--base", "master", denylist=denylist, public_emails=public_emails)
+    def check(self, denylist=""):
+        return self.run_script("check", "--generated", "--base", "master", denylist=denylist)
 
     def fork_check(self):
         return self.run_script("check", "--base", "master", "--fork")
@@ -240,19 +240,10 @@ class CatalogTest(unittest.TestCase):
         code, output = self.check()
         self.assertIn("possible API key", output)
 
-    def test_a_personal_commit_email_fails_unless_listed(self):
+    def test_a_commit_email_is_the_committers_choice(self):
         self.git("-c", "user.email=me@example.com", "commit", "-q", "--allow-empty", "--author", "Me <me@example.com>", "-m", "change")
         code, output = self.check()
-        self.assertEqual(code, 1, output)
-        self.assertIn("its author email isn't a GitHub noreply address", output)
-        code, output = self.check(public_emails="me@example.com")
-        self.assertNotIn("noreply address", output)
-
-    def test_a_fork_contributors_email_is_only_a_warning(self):
-        self.git("commit", "-q", "--allow-empty", "--author", "Them <them@example.com>", "-m", "change")
-        code, output = self.fork_check()
         self.assertEqual(code, 0, output)
-        self.assertIn("warning: commit", output)
 
     def test_an_image_with_exif_fails(self):
         (self.root / "bots/catalog-manager/photo.png").write_bytes(b"\x89PNG\r\n\x1a\nExif\x00\x00GPS")
