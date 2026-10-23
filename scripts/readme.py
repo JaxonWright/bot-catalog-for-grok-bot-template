@@ -3,7 +3,7 @@
 import html
 from pathlib import Path
 
-from avatars import ANIMATION_STYLE, avatar_body
+from avatars import ANIMATION_STYLE, INK, avatar_body
 from model import BOT_LICENSES, PROMPTS, README, ROOT, TEMPLATES, Bot, Catalog, fence, substitute
 from wordmark import STROKE, bubble_word
 
@@ -33,7 +33,7 @@ HEADER_GROUP = (
     # "wordmark" takes the wordmark's color, so this bot is dark in the light header and white in the dark one.
     ("circle", "wordmark", 42, 44, 88, 4.3),
 )
-HEADER_INK = {"light": "#1F2328", "dark": "#E6EDF3"}
+HEADER_INK = {"light": INK, "dark": "#E6EDF3"}
 SANS = "-apple-system, Segoe UI, Helvetica, Arial, sans-serif"
 # Pixels per bubble-letter grid unit, and the distance between stacked words.
 WORDMARK_SCALE = 4.2

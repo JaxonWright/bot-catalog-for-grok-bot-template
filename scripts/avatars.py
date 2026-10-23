@@ -33,14 +33,20 @@ DARK_COLORS = {
 }
 # Only the README header uses these. Bots can't, because Grok Bot has no white, and its black turns white in
 # dark mode while the header's ink stays dark.
-ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": "#16161A"}
-# Bots have white eyes in light mode and black eyes in dark mode, as in Grok Bot. Every avatar SVG carries
-# this rule. The header is drawn once per theme, so it takes its colors from avatar_body's theme instead.
-DARK_MODE_STYLE = (
-    "\n@media (prefers-color-scheme: dark) {\n"
-    + "".join(f"  .{name} .skin {{ fill: {value}; color: {value}; }}\n" for name, value in DARK_COLORS.items())
-    + "  .eye { fill: #000000; }\n}\n"
-)
+# GitHub's light-theme text color, so the header's bubble letters and plain text match.
+INK = "#1F2328"
+ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": INK}
+if DARK_COLORS.keys() != COLORS.keys():
+    raise RuntimeError("COLORS and DARK_COLORS must name the same colors")
+
+
+def dark_mode_style(color: str) -> str:
+    """Bots have white eyes in light mode and black eyes in dark mode, as in Grok Bot, and a darker body.
+
+    The header is drawn once per theme, so it takes its colors from avatar_body's theme instead.
+    """
+    value = DARK_COLORS[color]
+    return f"\n@media (prefers-color-scheme: dark) {{\n  .{color} .skin {{ fill: {value}; color: {value}; }}\n  .eye {{ fill: #000000; }}\n}}\n"
 
 
 @dataclass(frozen=True)
@@ -223,12 +229,10 @@ ANIMATION_STYLE = """
 }
 @media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
 """
-# Each header is drawn for one theme, so only a bot's own avatar follows the viewer's mode.
-AVATAR_STYLE = ANIMATION_STYLE + DARK_MODE_STYLE
 
 
 def render_avatar(shape: str, color: str) -> str:
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="128" height="128">'
-        f"<style>{AVATAR_STYLE}</style>{avatar_body(shape, color)}</svg>\n"
+        f"<style>{ANIMATION_STYLE}{dark_mode_style(color)}</style>{avatar_body(shape, color)}</svg>\n"
     )
