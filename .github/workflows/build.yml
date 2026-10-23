@@ -11,7 +11,8 @@ permissions:
   actions: write
 
 concurrency:
-  group: build-${{ github.head_ref }}
+  # Keyed on the pull request, since a fork's branch can share a name with one here.
+  group: build-${{ github.event.pull_request.number }}
 
 jobs:
   build:

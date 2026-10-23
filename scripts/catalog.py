@@ -24,7 +24,11 @@ SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 ICON_TYPES = {".svg", ".gif", ".webp", ".png"}
 ICON_NAME = re.compile(r"[\w-]+(\.[\w-]+)*")
 SHARE_URL = re.compile(r"https://x\.ai/bot/[\w-]+")
-LINK = re.compile(r"https?://[^\s)>\]\"'`]+")
+# Web links, including ones written without https:// such as www.example.com or example.com/page.
+LINK = re.compile(
+    r"https?://[^\s)>\]\"'`]+|www\.[^\s)>\]\"'`]+"
+    r"|(?<![\w@./-])[\w-]+(?:\.[\w-]+)*\.(?:ai|app|co|com|dev|gg|info|io|ly|me|net|org|sh|so|to|xyz)\b(?:/[^\s)>\]\"'`]*)?"
+)
 # Characters that would start markdown or HTML in the bundle's headings and Schedule lines, which sit outside code blocks.
 MARKUP = re.compile(r"[<>\[\]`]|https?://|www\.", re.I)
 
@@ -93,6 +97,9 @@ def load_bot(directory: Path) -> Bot:
     missing = {"name", "version", "summary"} - meta.keys()
     if missing:
         raise Invalid(f"{where}/bot.toml is missing {', '.join(sorted(missing))}")
+    types = {"share_url": str, "icon": str, "avatar": dict, "template_only": bool}
+    if wrong := [key for key, kind in types.items() if key in meta and not isinstance(meta[key], kind)]:
+        raise Invalid(f"{where}/bot.toml: {', '.join(wrong)} has the wrong type")
     if not isinstance(meta["version"], str) or not SEMVER.match(meta["version"]):
         raise Invalid(f"{where}/bot.toml: version must look like 1.2.3")
     if ("avatar" in meta) == ("icon" in meta):
