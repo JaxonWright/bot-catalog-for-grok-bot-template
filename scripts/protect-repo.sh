@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Applies .github/rulesets/*.json to this repository. Same result as importing them under
-# Settings > Rules > Rulesets, and turns on Settings > General > Automatically delete head branches. Safe to run again. Needs a public repo or a paid GitHub plan.
+# Settings > Rules > Rulesets, and turns on Settings > General > Automatically delete head branches and
+# Settings > Security > Private vulnerability reporting. Safe to run again. Needs a public repo or a paid GitHub plan.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
@@ -18,3 +19,6 @@ done
 
 gh api -X PATCH "repos/$repo" -f delete_branch_on_merge=true >/dev/null
 echo "automatic deletion of merged branches turned on"
+
+gh api -X PUT "repos/$repo/private-vulnerability-reporting" >/dev/null
+echo "private vulnerability reporting turned on"

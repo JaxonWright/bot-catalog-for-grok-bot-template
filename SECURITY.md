@@ -4,7 +4,7 @@ A bot catalog changes the instructions of every Grok Bot installed from it, and 
 
 ## Reporting a problem
 
-Please don't open a public issue for a security problem. Use **Security > Report a vulnerability** on the repository instead, which reaches its maintainers privately. A problem with the template itself, its workflows, scripts, update check, or Catalog Manager, goes to the [template repository](https://github.com/JaxonWright/bot-catalog-for-grok-bot-template/security).
+Please don't open a public issue for a security problem. Use **Security > Report a vulnerability** on the repository instead, which reaches its maintainers privately. Catalog setup and `scripts/protect-repo.sh` turn that form on. A problem with the template itself, its workflows, scripts, update check, or Catalog Manager, goes to the [template repository](https://github.com/JaxonWright/bot-catalog-for-grok-bot-template/security).
 
 ## Risks and how they are handled
 
@@ -12,7 +12,7 @@ Please don't open a public issue for a security problem. Use **Security > Report
 
 Anyone who can push to a catalog's `master` branch can change what every installed copy of its bots is told to do, through an update. That includes an attacker who takes over a maintainer's GitHub account.
 
-- **Handled.** An installed bot never updates on its own. It shows its user the changelog and a link to the full diff, and updates only after a yes. `master` only changes through a pull request that passes CI and merges with a merge commit. Release tags can't be moved or deleted, and the update check reads the changelog and bundle from the release tag itself, so what a user reviews is exactly what they install.
+- **Handled.** An installed bot never updates on its own. It shows its user the changelog and a link to the full diff, and updates only after a yes. Once the rulesets in `.github/rulesets/` are imported, `master` only changes through a pull request that passes its required checks and merges with a merge commit. The one exception comes before that: "Set up catalog" pushes a single commit straight to `master` when the catalog is created. Release tags can't be moved or deleted, and the update check reads the changelog and bundle from the release tag itself, so what a user reviews is exactly what they install.
 - **You accept.** If you approve an update without reading it, you are trusting the catalog's maintainer and their account security. Maintainers should use a hardware key or passkey for GitHub two-factor sign-in.
 - **To opt out.** Tell any installed bot to turn automatic update checks off. It keeps its current version until you turn them back on.
 
@@ -20,29 +20,29 @@ Anyone who can push to a catalog's `master` branch can change what every install
 
 Installed bots fetch each update from its release tag, `<slug>-v<version>`.
 
-- **Handled.** The `protect-release-tags.json` ruleset blocks updating or deleting any `*-v*` tag. CI fails while any `*-v*` tag points outside `master`'s history, so a tag made by hand ahead of a release shows up before its version merges. The Release workflow tags nothing unless `master` passes every check, including up-to-date install bundles, and it runs one release at a time. Branches must be up to date with `master` before they merge, so a bundle built from an older update check can't slip in.
-- **You accept.** Repository admins can turn rulesets off. A catalog without its rulesets imported has no tag protection. Anyone with write access can still create a tag on `master` for a version that isn't released yet, which installs content that was already reviewed under the wrong version number.
+- **Handled.** The `protect-release-tags.json` ruleset blocks updating or deleting any `*-v*` tag. CI fails while any `*-v*` tag points outside `master`'s history, so a tag made by hand ahead of a release shows up before its version merges. The Release workflow tags nothing unless `master` passes the catalog check, including up-to-date install bundles and the tag rule above, and it runs one release at a time. It also tags nothing in a new copy of the template until "Set up catalog" points `catalog.toml` at that copy. Branches must be up to date with `master` before they merge, so a bundle built from an older update check can't slip in.
+- **You accept.** Rulesets need a public repository or a paid GitHub plan, and repository admins can turn them off. A catalog without its rulesets imported has no tag protection and no required checks. Anyone with write access can still create tags. A tag made outside `master` in the seconds between a merge and its Release run would be installed before CI flags it, and a tag on `master` for a version that isn't released yet installs content that was already reviewed under the wrong version number. Give write access only to people you'd trust to ship an update.
 
 ### A pull request that adds harmful instructions
 
 Anyone can propose changes to a bot. A change could quietly tell the bot to send data somewhere, or to act without asking.
 
-- **Handled.** Every change needs a maintainer to merge it. CI warns about every new link in a bot's files. The Catalog Manager's triage calls out new permissions, routines, outside contacts, and links, and it treats everything written in issues and pull requests as data, never as instructions.
+- **Handled.** Every change needs a maintainer to merge it. CI warns about every new `http` or `https` link in a bot's files. The Catalog Manager's triage calls out new permissions, routines, outside contacts, and links, and it treats everything written in issues and pull requests as data, never as instructions.
 - **You accept.** A reviewer can miss something. Read the changelog and diff before you accept an update.
 
 ### A swapped Add Grok Bot link
 
 A bot's `share_url` decides which bot the README's **Add Grok Bot** button installs. Pointing it at a look-alike bot would be easy to miss in review.
 
-- **Handled.** The Fork check workflow rejects a pull request from a fork that changes a `share_url` or anything outside `bots/`, including `catalog.toml`, whose `repo` decides where every bot looks for updates. It runs this repository's own copy of the check and only reads the fork's files, and `master` requires it, so the pull request can't switch it off. The Catalog Manager moves a fork's pull request into the repository only after its Fork check passes. A new bot can't merge until the catalog's owner publishes it and adds the link, and the Catalog Manager never asks anyone else for one. CI accepts only Grok Bot share links (`https://x.ai/bot/...`), so the button can't lead to another website. The README shows each bot's name and summary as plain text, so a summary can't add a second button or link. The Catalog Manager's triage calls out any `share_url` change.
+- **Handled.** The Fork check workflow rejects a pull request from a fork that changes a `share_url` or anything outside `bots/`, including `catalog.toml`, whose `repo` decides where every bot looks for updates. It runs this repository's own copy of the check and only reads the fork's files, and `master` requires it, so the pull request can't switch it off. The Catalog Manager moves a fork's pull request into the repository only after its Fork check passes. A new bot can't merge until the catalog's owner publishes it and adds the link, and the Catalog Manager never asks anyone else for one. CI accepts only Grok Bot share links (`https://x.ai/bot/...`), so the button can't lead to another website. The README shows each bot's name and summary as plain text, and names must be one line with no links or markup, so neither can add a second button or link. The Catalog Manager's triage calls out any `share_url` change.
 - **You accept.** A maintainer can still change it, so the button is only as trustworthy as the catalog's maintainers. A fork's own workflows can also report a check named `fork-check`. Treat a failed Fork check as final, even next to a passing one.
 
 ### Personal details published by mistake
 
 The repository is public. Anything pushed to it, including branches, commits, and pull request text, is public right away and stays in its history even after it is deleted.
 
-- **Handled.** The Catalog Manager and the share prompt draft everything in chat, list what they removed only there, and push nothing until the user approves. CI rejects email addresses, phone numbers, private IP addresses, API-key shapes, and anything in the maintainer's `PRIVATE_DENYLIST` secret. CI logs are public, so a `PRIVATE_DENYLIST` match says only that something matched, never which entry, file, or line. gitleaks scans for secrets.
-- **You accept.** CI runs after a push, so it catches a leak but can't take it back. The approval in chat is the real safeguard. If something private is pushed, treat it as public. Rotate any key, and ask GitHub Support to purge cached views if needed.
+- **Handled.** The Catalog Manager and the share prompt draft everything in chat, list what they removed only there, and push nothing until the user approves. In the files under `bots/` and `catalog/`, CI rejects email addresses, US-style phone numbers, private IP addresses, API-key shapes, and anything in the maintainer's `PRIVATE_DENYLIST` secret. CI logs are public, so a `PRIVATE_DENYLIST` match says only that something matched, never which entry, file, or line. gitleaks scans every commit for secrets.
+- **You accept.** CI runs after a push, so it catches a leak but can't take it back. It doesn't check other files, pull request text, images, or commit details. Every commit carries its author's name and email, so commit with GitHub's `noreply` address and turn on "Keep my email addresses private" in GitHub's email settings. The approval in chat is the real safeguard. If something private is pushed, treat it as public. Rotate any key, and ask GitHub Support to purge cached views if needed.
 
 ### Tricking the Catalog Manager
 
@@ -60,7 +60,7 @@ The Catalog Manager reads text written by strangers, such as issues, pull reques
 
 ### Workflow permissions
 
-- **Handled.** CI runs on pull requests with a read-only token, and pull requests from forks get no secrets. The Fork check reads a fork's files but never runs them. Set up catalog runs only when someone starts it by hand. Release creates tags only after a merge into `master`. Build commits generated files to pull request branches in the repository, never to a fork. It reads the branch's files with no saved credentials, and the check rejects symlinks, so a file can't copy the workflow's token into `dist/`.
+- **Handled.** CI runs on pull requests with a read-only token, and pull requests from forks get no secrets. The Fork check reads a fork's files but never runs them. Set up catalog runs only when someone starts it by hand. Release creates tags only from `master`, after a merge or when a maintainer reruns it. Build commits generated files to pull request branches in the repository, never to a fork. It reads the branch's files with no saved credentials, and the check rejects symlinks, so a file can't copy the workflow's token into `dist/`.
 - **You accept.** Anyone with write access can push a branch, and code on a pull request branch in the repository runs in the Build workflow with write access. Review changes to `scripts/` and `.github/` with extra care. The Catalog Manager moves a fork's pull request into the repository only when its Fork check passed, which means it changes nothing outside `bots/`.
 
 ### Updates have no signatures
