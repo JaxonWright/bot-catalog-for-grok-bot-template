@@ -35,7 +35,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python scripts/catalog.py unreleased > unreleased.txt
+          python scripts/catalog.py unreleased --repo "$GITHUB_REPOSITORY" > unreleased.txt
           failed=0
           while read -r slug version; do
             python scripts/catalog.py notes "$slug" > notes.md

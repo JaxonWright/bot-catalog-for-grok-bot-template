@@ -145,6 +145,15 @@ class CatalogTest(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn("tag catalog-manager-v99.0.0 isn't on master", output)
 
+    def test_a_new_copy_of_the_template_releases_nothing(self):
+        self.git("tag", "-d", "catalog-manager-v" + self.version())
+        code, output = self.run_script("unreleased", "--repo", "someone/new-catalog")
+        self.assertEqual(code, 0, output)
+        self.assertNotIn("catalog-manager", output)
+        repo = next(line.split('"')[1] for line in (self.root / "catalog.toml").read_text().splitlines() if line.startswith("repo ="))
+        code, output = self.run_script("unreleased", "--repo", repo.upper())
+        self.assertIn(f"catalog-manager {self.version()}", output)
+
     def test_release_refuses_a_stale_bundle(self):
         self.edit("catalog/updater-skill.md", "\n", "\nA newer update check.\n")
         self.commit()

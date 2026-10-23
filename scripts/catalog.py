@@ -776,7 +776,12 @@ def cmd_configure(args) -> int:
     return cmd_build(args)
 
 
-def cmd_unreleased(_args) -> int:
+def cmd_unreleased(args) -> int:
+    # A new copy of the template still says it's the template until "Set up catalog" runs, so its bots aren't its own yet.
+    repo = load_catalog().repo
+    if args.repo and args.repo.lower() != repo.lower():
+        print(f"catalog.toml says this is {repo}, not {args.repo}, so nothing is released until it's set up", file=sys.stderr)
+        return 0
     tags = set(git("tag", "--list").split())
     for bot in load_bots():
         if f"{bot.slug}-v{bot.version}" not in tags:
@@ -805,7 +810,9 @@ def main() -> int:
     configure.add_argument("--bots-license", dest="bots_license", choices=list(BOT_LICENSES), help="license for the bots in this catalog")
     configure.add_argument("--template", choices=["true", "false"], help="show the README note that this repo is a template")
     configure.set_defaults(run=cmd_configure)
-    commands.add_parser("unreleased", help="print 'slug version' for each bot without a release tag").set_defaults(run=cmd_unreleased)
+    unreleased = commands.add_parser("unreleased", help="print 'slug version' for each bot without a release tag")
+    unreleased.add_argument("--repo", help="owner/name of this repository. Prints nothing unless catalog.toml's repo matches")
+    unreleased.set_defaults(run=cmd_unreleased)
     notes = commands.add_parser("notes", help="print the changelog section for a bot's current version")
     notes.add_argument("slug")
     notes.set_defaults(run=cmd_notes)
