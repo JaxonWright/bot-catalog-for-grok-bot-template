@@ -3,39 +3,52 @@
 import math
 from dataclasses import dataclass
 
-# The colors Grok Bot offers for a bot, by the same names, so a bot's avatar can be copied straight across.
+# The colors Grok Bot offers for a bot, by the same names and values, so a bot's avatar can be copied straight across.
 COLORS = {
-    "black": "#16161A",
-    "brown": "#8F5E34",
-    "red": "#F2414F",
-    "orange": "#FF7A1A",
-    "yellow": "#FFB224",
-    "green": "#1DBF73",
-    "cyan": "#14B8C4",
-    "blue": "#2F80FF",
-    "violet": "#8B5CF6",
-    "magenta": "#EE3D96",
-    "gray": "#8A8F98",
+    "black": "#000000",
+    "brown": "#A27952",
+    "red": "#FF3E51",
+    "orange": "#FF781C",
+    "yellow": "#FFAF38",
+    "green": "#00C972",
+    "cyan": "#1CC3B0",
+    "blue": "#2A92FE",
+    "violet": "#A97EFE",
+    "magenta": "#FF5EB1",
+    "gray": "#959595",
+}
+# Grok Bot darkens each color in dark mode, and turns black white.
+DARK_COLORS = {
+    "black": "#FFFFFF",
+    "brown": "#855C36",
+    "red": "#E02135",
+    "orange": "#FF6700",
+    "yellow": "#FF9800",
+    "green": "#009957",
+    "cyan": "#00A592",
+    "blue": "#0E74E0",
+    "violet": "#804EE0",
+    "magenta": "#E02A88",
+    "gray": "#777777",
 }
 # Only the README header uses these. Bots can't, because Grok Bot has no white, and its black turns white in
 # dark mode while the header's ink stays dark.
-ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": COLORS["black"]}
-# Bots have white eyes in light mode and black eyes in dark mode, where a black bot also turns white,
-# as in Grok Bot. Every avatar SVG carries this rule. The header's white and ink keep their eyes fixed.
-DARK_MODE_STYLE = """
-@media (prefers-color-scheme: dark) {
-  .black .skin { fill: #FFFFFF; color: #FFFFFF; }
-  .eye { fill: #000000; }
-}
-"""
+ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": "#16161A"}
+# Bots have white eyes in light mode and black eyes in dark mode, as in Grok Bot. Every avatar SVG carries
+# this rule. The header is drawn once per theme, so it takes its colors from avatar_body's theme instead.
+DARK_MODE_STYLE = (
+    "\n@media (prefers-color-scheme: dark) {\n"
+    + "".join(f"  .{name} .skin {{ fill: {value}; color: {value}; }}\n" for name, value in DARK_COLORS.items())
+    + "  .eye { fill: #000000; }\n}\n"
+)
 
 
 @dataclass(frozen=True)
 class Eyes:
-    cy: float = 28
-    width: float = 7
+    cy: float = 29
+    width: float = 5
     height: float = 12
-    gap: float = 13
+    gap: float = 12.5
 
 
 @dataclass(frozen=True)
@@ -109,56 +122,60 @@ def ring(count: int, distance: float, radius: float, cy: float = 30) -> tuple[st
     )
 
 
-SMALL_EYES = Eyes(cy=30, width=6, height=10, gap=11)
-# A lid in a darker shade of the body, so the cylinder reads as round on top.
-SHADE = 'fill="#000" fill-opacity="0.18"'
+def petal(angle: float, distance: float, rx: float, ry: float, twist: float) -> str:
+    """An ellipse pointing out from the center at angle degrees clockwise from the top, turned by twist."""
+    a = math.radians(angle)
+    cx, cy = 30 + distance * math.sin(a), 30 - distance * math.cos(a)
+    return f'<ellipse cx="{cx:.2f}" cy="{cy:.2f}" rx="{rx}" ry="{ry}" transform="rotate({angle - 90 + twist:g} {cx:.2f} {cy:.2f})"/>'
 
-# Grok Bot's shapes, by the same names. The drawings are this project's own.
+
+SMALL_EYES = Eyes(width=4.5, height=10, gap=10)
+
+# Grok Bot's shapes, by the same names, drawn to match how Grok Bot shows them. The drawings are this project's own.
 SHAPES = {
-    "blob": Shape((smooth_closed(radial([25, 27, 23, 26, 24, 27, 22, 26], cy=31)),), Eyes(cy=29)),
-    "pebble": Shape((smooth_closed(radial([26, 27, 28, 26, 25, 27, 28, 26], cy=31, squash=0.74)),), Eyes(cy=30, height=11)),
-    "bean": Shape((smooth_closed([(14, 14), (30, 20), (46, 14), (56, 29), (46, 46), (30, 50), (14, 46), (4, 29)]),), Eyes(cy=33)),
-    "egg": Shape(('<path d="M30 4 C44 4 52 24 52 36 C52 48 42 56 30 56 C18 56 8 48 8 36 C8 24 16 4 30 4 Z"/>',), Eyes(cy=33)),
-    "squircle": Shape((superellipse(25, 4.5),)),
-    "tablet": Shape(('<rect x="11" y="4" width="38" height="52" rx="10"/>',), Eyes(cy=26, gap=12)),
-    "capsule": Shape(('<rect x="14" y="5" width="32" height="50" rx="16"/>',), Eyes(cy=26, width=6.5, gap=11)),
-    "cylinder": Shape(
-        (
-            '<path d="M9 14 A21 8 0 0 1 51 14 V46 A21 8 0 0 1 9 46 Z"/>',
-            f'<ellipse cx="30" cy="14" rx="21" ry="8" {SHADE}/>',
-        ),
-        Eyes(cy=34),
-    ),
-    "hex": Shape((regular_polygon(6, 27, 6),)),
-    "gem": Shape((rounded_polygon([(17, 9), (43, 9), (56, 24), (30, 55), (4, 24)], 4),), Eyes(cy=24, height=10)),
-    "crystal": Shape((rounded_polygon([(30, 3), (47, 15), (47, 45), (30, 57), (13, 45), (13, 15)], 4),), Eyes(cy=29, width=6, gap=12)),
-    "wedge": Shape((rounded_polygon([(30, 6), (56, 51), (4, 51)], 9),), Eyes(cy=37, width=6, height=10, gap=11)),
-    "shield": Shape(('<path d="M8 11 Q30 1 52 11 V28 C52 42 42 51 30 57 C18 51 8 42 8 28 Z"/>',), Eyes(cy=26)),
-    "dome": Shape(('<path d="M5 47 V37 A25 25 0 0 1 55 37 V47 Q55 52 50 52 H10 Q5 52 5 47 Z"/>',), Eyes(cy=33)),
-    "arch": Shape(('<path d="M6 55 V30 A24 24 0 0 1 54 30 V55 H41 V41 A11 11 0 0 0 19 41 V55 Z"/>',), Eyes(cy=21, height=10)),
+    "blob": Shape(('<circle cx="30" cy="30" r="23"/>',)),
+    "pebble": Shape((smooth_closed(radial([21, 23, 24, 22, 21, 22, 24, 22], cy=30.5, squash=0.9)),), Eyes(cy=27)),
+    "bean": Shape((smooth_closed([(29, 8), (40, 11), (46.5, 22), (46, 36), (39, 48), (28, 52), (18, 49), (15, 41), (18, 32), (16, 20), (20, 11)]),), Eyes(cy=28)),
+    "egg": Shape(('<path d="M30 7 C40 7 49 22 49 35 C49 46 40 53 30 53 C20 53 11 46 11 35 C11 22 20 7 30 7 Z"/>',), Eyes(cy=31)),
+    "squircle": Shape((superellipse(23, 7),)),
+    "tablet": Shape(('<rect x="7" y="15" width="46" height="30" rx="15"/>',), Eyes(cy=30)),
+    "capsule": Shape(('<rect x="15" y="7" width="30" height="46" rx="15"/>',), Eyes(cy=26, gap=11)),
+    "cylinder": Shape(('<path d="M10 13 A20 6 0 0 1 50 13 V47 A20 6 0 0 1 10 47 Z"/>',), Eyes(cy=27)),
+    "hex": Shape((regular_polygon(6, 24, 5),)),
+    "gem": Shape(('<path d="M30 7 C38 11 53 22 53 30 C53 38 38 49 30 53 C22 49 7 38 7 30 C7 22 22 11 30 7 Z"/>',), Eyes(cy=28)),
+    "crystal": Shape((rounded_polygon([(30, 6), (43, 18), (43, 42), (30, 54), (17, 42), (17, 18)], 3),), SMALL_EYES),
+    "wedge": Shape((rounded_polygon([(30, 6), (56, 51), (4, 51)], 9),), Eyes(cy=33, width=4.5, height=11, gap=11)),
+    "shield": Shape(('<path d="M15 7 Q30 5 45 7 Q50 8 50 13 C50 37 43 53 30 53 C17 53 10 37 10 13 Q10 8 15 7 Z"/>',), Eyes(cy=24)),
+    "dome": Shape(('<path d="M7 45 V37 A23 23 0 0 1 53 37 V45 Q53 47 51 47 H9 Q7 47 7 45 Z"/>',), Eyes(cy=34)),
+    "arch": Shape(('<path d="M14 51 V23 A16 16 0 0 1 46 23 V51 Q46 53 44 53 H16 Q14 53 14 51 Z"/>',), Eyes(cy=27, gap=11)),
     "cloud": Shape(
         (
-            '<circle cx="18" cy="35" r="13"/>',
-            '<circle cx="31" cy="25" r="16"/>',
-            '<circle cx="43" cy="35" r="12"/>',
-            '<rect x="16" y="30" width="28" height="18" rx="6"/>',
+            '<circle cx="24.5" cy="22" r="11.5"/>',
+            '<circle cx="37" cy="24.5" r="10"/>',
+            '<circle cx="17" cy="34.5" r="10"/>',
+            '<circle cx="43" cy="34.5" r="10"/>',
+            '<circle cx="30" cy="37" r="11.5"/>',
         ),
-        Eyes(cy=32),
+        Eyes(cy=27),
     ),
-    "teardrop": Shape(('<path d="M30 3 C38 13 52 24 52 34 A22 22 0 0 1 8 34 C8 24 22 13 30 3 Z"/>',), Eyes(cy=35)),
-    "leaf": Shape(('<path d="M7 53 C7 25 25 7 53 7 C53 35 35 53 7 53 Z"/>',), Eyes(cy=30, width=6, height=10, gap=12)),
-    "square": Shape(('<rect x="7" y="7" width="46" height="46" rx="6"/>',)),
-    "sparkle": Shape(('<path d="M30 3 Q37 23 57 30 Q37 37 30 57 Q23 37 3 30 Q23 23 30 3 Z"/>',), Eyes(cy=30, width=5, height=9, gap=9)),
-    "clover": Shape(
-        ('<path d="M30 36 Q31 48 39 56" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>', *ring(3, 12, 13.5, cy=27), '<circle cx="30" cy="27" r="11"/>'),
-        Eyes(cy=27, width=6, height=10, gap=11),
+    "teardrop": Shape(('<path d="M30 7 C34 12 49.5 23 49.5 33.5 A19.5 19.5 0 0 1 10.5 33.5 C10.5 23 26 12 30 7 Z"/>',), Eyes(cy=26)),
+    "leaf": Shape(('<path d="M30 7 C41 14 47.5 23 47.5 30 C47.5 37 41 46 30 53 C19 46 12.5 37 12.5 30 C12.5 23 19 14 30 7 Z"/>',), Eyes(cy=29, gap=11)),
+    "square": Shape(('<rect x="7" y="7" width="46" height="46" rx="5"/>',)),
+    "sparkle": Shape((*(petal(angle, 11, 12, 7, -15) for angle in (15, 105, 195, 285)), '<circle cx="30" cy="30" r="9"/>'), SMALL_EYES),
+    "clover": Shape(tuple(f'<circle cx="{x}" cy="{y}" r="12"/>' for x in (19, 41) for y in (19, 41)) + ('<rect x="19" y="19" width="22" height="22"/>',), Eyes(cy=30)),
+    "flower": Shape((*ring(6, 15, 8.5), '<circle cx="30" cy="30" r="14"/>'), SMALL_EYES),
+    "heart": Shape(
+        (
+            '<circle cx="19.5" cy="22" r="11"/>',
+            '<circle cx="40.5" cy="22" r="11"/>',
+            rounded_polygon([(11.7, 29.8), (30, 48.5), (48.3, 29.8), (30, 20)], 3),
+        ),
+        Eyes(cy=27),
     ),
-    "flower": Shape((*ring(5, 16, 11), '<circle cx="30" cy="30" r="15"/>'), SMALL_EYES),
-    "heart": Shape(('<path d="M30 54 C14 42 4 33 4 21 C4 12 11 6 19 6 C24 6 28 9 30 13 C32 9 36 6 41 6 C49 6 56 12 56 21 C56 33 46 42 30 54 Z"/>',), Eyes(cy=25)),
-    "house": Shape((rounded_polygon([(30, 4), (56, 27), (50, 27), (50, 55), (10, 55), (10, 27), (4, 27)], 3),), Eyes(cy=38)),
-    "star": Shape((star(5, 28, 14, 32, 3),), Eyes(cy=33, width=5, height=9, gap=9)),
+    "house": Shape((rounded_polygon([(30, 7), (52, 21), (52, 53), (8, 53), (8, 21)], 4),), Eyes(cy=27)),
+    "star": Shape((star(6, 24, 15, 30, 4),), SMALL_EYES),
 }
-# Only the README header's wordmark uses a plain circle. Bots can't, because Grok Bot has no circle.
+# Only the README header and wordmark use this circle, which fills the canvas so a stretched one can wrap a letter.
 ARTWORK_SHAPES = SHAPES | {"circle": Shape(('<circle cx="30" cy="30" r="25"/>',))}
 
 
@@ -174,12 +191,14 @@ def avatar_body(shape: str, color: str, theme: str | None = None) -> str:
     ink = "#000000" if color == "white" or theme == "dark" else "#FFFFFF"
     eye_class = "blink eye" if color in COLORS and theme is None else "blink"
     e = spec.eyes
+    # Grok Bot's eyes lean a little to the right.
     eyes = "".join(
-        f'<rect class="{eye_class}" x="{30 + side * e.gap / 2 - e.width / 2:.2f}" y="{e.cy - e.height / 2:.2f}" '
-        f'width="{e.width}" height="{e.height}" rx="{e.width / 2}" fill="{ink}"/>'
+        f'<g transform="rotate(7 {30 + side * e.gap / 2:.2f} {e.cy})"><rect class="{eye_class}" '
+        f'x="{30 + side * e.gap / 2 - e.width / 2:.2f}" y="{e.cy - e.height / 2:.2f}" '
+        f'width="{e.width}" height="{e.height}" rx="{e.width / 2}" fill="{ink}"/></g>'
         for side in (-1, 1)
     )
-    fill = ARTWORK_COLORS[color]
+    fill = DARK_COLORS[color] if theme == "dark" and color in DARK_COLORS else ARTWORK_COLORS[color]
     return (
         f'<g class="body {color}">{outline}<g class="skin" fill="{fill}" color="{fill}">{parts}</g>'
         f'<g class="look">{eyes}</g></g>'
