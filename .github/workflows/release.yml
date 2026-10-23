@@ -3,12 +3,20 @@ name: Release
 on:
   push:
     branches: [master]
+  # Run it by hand on master to retry a release that failed.
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+# One at a time, so two quick merges can't race for the same tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +27,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # A tag can't be moved or deleted, so nothing is tagged unless master's bundles are current and every check passes.
+      - name: Check master
+        run: python scripts/catalog.py check --generated
+
       - name: Tag every bot whose version has no release yet
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python scripts/catalog.py unreleased | while read -r slug version; do
+          python scripts/catalog.py unreleased > unreleased.txt
+          failed=0
+          while read -r slug version; do
             python scripts/catalog.py notes "$slug" > notes.md
-            gh release create "$slug-v$version" --target "$GITHUB_SHA" --title "$slug $version" --notes-file notes.md --latest=false < /dev/null
-          done
+            gh release create "$slug-v$version" --target "$GITHUB_SHA" --title "$slug $version" --notes-file notes.md --latest=false < /dev/null || failed=1
+          done < unreleased.txt
+          exit "$failed"

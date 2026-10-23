@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test the checks
+        run: python -m unittest discover -s scripts
+
       - name: Check bots and privacy
         env:
           PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
