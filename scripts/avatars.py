@@ -203,3 +203,32 @@ def avatar_body(shape: str, color: str, theme: str | None = None) -> str:
         f'<g class="body {color}">{outline}<g class="skin" fill="{fill}" color="{fill}">{parts}</g>'
         f'<g class="look">{eyes}</g></g>'
     )
+
+ANIMATION_STYLE = """
+.body { transform-origin: 30px 30px; animation: breathe 3.2s ease-in-out var(--d, 0s) infinite; }
+.look { animation: look 8s ease-in-out var(--d, 0s) infinite; }
+.blink { transform-box: fill-box; transform-origin: center; animation: blink 8s var(--d, 0s) infinite; }
+@keyframes breathe { 50% { transform: scale(1.05); } }
+@keyframes look {
+  0%, 10% { transform: translate(0, 0); }
+  16%, 32% { transform: translate(-2.6px, -0.4px); }
+  38%, 48% { transform: translate(0, 0); }
+  54%, 70% { transform: translate(2.6px, 0.6px); }
+  76%, 86% { transform: translate(1.2px, -1.8px); }
+  92%, 100% { transform: translate(0, 0); }
+}
+@keyframes blink {
+  0%, 34%, 38%, 88%, 92%, 100% { transform: scaleY(1); }
+  36%, 90% { transform: scaleY(0.12); }
+}
+@media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
+"""
+# Each header is drawn for one theme, so only a bot's own avatar follows the viewer's mode.
+AVATAR_STYLE = ANIMATION_STYLE + DARK_MODE_STYLE
+
+
+def render_avatar(shape: str, color: str) -> str:
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="128" height="128">'
+        f"<style>{AVATAR_STYLE}</style>{avatar_body(shape, color)}</svg>\n"
+    )
