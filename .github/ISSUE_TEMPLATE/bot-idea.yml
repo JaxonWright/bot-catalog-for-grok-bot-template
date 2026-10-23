@@ -1,11 +1,13 @@
 name: Bot idea
-description: Suggest an improvement to a bot, or a new bot.
+description: Suggest an improvement to one of this catalog's bots.
 labels: [enhancement]
 body:
   - type: input
     id: bot
     attributes:
-      label: Which bot? Leave blank for a new one.
+      label: Which bot?
+    validations:
+      required: true
   - type: textarea
     id: idea
     attributes:

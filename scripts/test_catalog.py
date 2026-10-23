@@ -14,6 +14,7 @@ SOURCE = SCRIPT.parent.parent
 PHONE = "+44 20 " + "7946 0958"
 EMAIL = "someone" + "@" + "gmail.com"
 TOKEN = "github_pat_" + "11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz"
+GOOGLE_KEY = "AIza" + "SyA1234567890abcdefghijklmnopqrstuv"
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "test",
     "GIT_AUTHOR_EMAIL": "1+test@users.noreply.github.com",
@@ -48,8 +49,8 @@ class CatalogTest(unittest.TestCase):
     def version(self):
         return next(line.split('"')[1] for line in (self.root / "bots/catalog-manager/bot.toml").read_text().splitlines() if line.startswith("version"))
 
-    def run_script(self, *args, denylist=""):
-        env = os.environ | {"CATALOG_ROOT": str(self.root), "PRIVATE_DENYLIST": denylist}
+    def run_script(self, *args, denylist="", **extra_env):
+        env = os.environ | {"CATALOG_ROOT": str(self.root), "PRIVATE_DENYLIST": denylist} | extra_env
         result = subprocess.run([sys.executable, str(SCRIPT), *args], env=env, capture_output=True, text=True)
         return result.returncode, result.stdout + result.stderr
 
@@ -304,6 +305,73 @@ class CatalogTest(unittest.TestCase):
         self.build_and_commit()
         code, output = self.check()
         self.assertIn("new link evil.example.io/collect", output)
+
+    def test_a_fork_cannot_add_a_bot(self):
+        self.add_bot("helper")
+        self.build_and_commit()
+        code, output = self.fork_check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("bots/helper: a pull request from a fork can only change this catalog's existing bots", output)
+
+    def test_a_fork_cannot_delete_a_bot(self):
+        self.git("switch", "-q", "master")
+        self.add_bot("helper")
+        self.build_and_commit("add helper")
+        self.git("switch", "-q", "change")
+        self.git("merge", "-q", "master")
+        self.git("rm", "-q", "-r", "bots/helper")
+        self.build_and_commit()
+        code, output = self.fork_check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("bots/helper: a pull request from a fork can only change this catalog's existing bots", output)
+
+    def test_a_fork_cannot_change_readme_prose(self):
+        (self.root / "README.md").write_text((self.root / "README.md").read_text() + "\n[Download the desktop app](https://example.com/app)\n")
+        self.commit()
+        code, output = self.fork_check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("README.md: a pull request from a fork can only change files in bots/", output)
+
+    def test_a_fork_may_include_the_readme_the_build_writes(self):
+        self.edit("bots/catalog-manager/bot.toml", 'summary = "', 'summary = "Newly worded. ')
+        self.bump()
+        self.build_and_commit()
+        code, output = self.fork_check()
+        self.assertEqual(code, 0, output)
+
+    def test_a_new_bot_from_this_repository_needs_its_share_link(self):
+        self.add_bot("helper")
+        self.edit("bots/helper/bot.toml", 'share_url = "https://x.ai/bot/helper"\n', "")
+        self.build_and_commit()
+        code, output = self.check()
+        self.assertEqual(code, 1, output)
+        self.assertIn("bots/helper is a new bot, so it needs share_url before it merges", output)
+
+    def test_look_alike_names_fail(self):
+        self.add_bot("helper")
+        self.edit("bots/helper/bot.toml", 'name = "helper"', 'name = "Catalog-Manager"')
+        code, output = self.run_script("build")
+        self.assertEqual(code, 1, output)
+        self.assertIn("its name is too close to bots/catalog-manager's", output)
+
+    def test_author_url_must_be_a_web_link(self):
+        self.edit("catalog.toml", 'author_url = ""', 'author_url = "javascript:alert(1)"')
+        code, output = self.run_script("build")
+        self.assertEqual(code, 1, output)
+        self.assertIn("author_url must be empty or start with https://", output)
+
+    def test_a_file_name_cannot_start_a_workflow_command(self):
+        (self.root / "bots/catalog-manager/a\n::error::forged.md").write_text("See https://example.com/new.\n")
+        self.bump()
+        self.build_and_commit()
+        code, output = self.run_script("check", "--base", "master", GITHUB_ACTIONS="true")
+        self.assertIn("::warning file=", output)
+        self.assertFalse([line for line in output.splitlines() if line.startswith("::error")], output)
+
+    def test_a_google_key_is_caught(self):
+        self.edit("bots/catalog-manager/instructions.md", "\n", "\nUse " + GOOGLE_KEY + ".\n")
+        code, output = self.run_script("check")
+        self.assertIn("possible API key", output)
 
 
 if __name__ == "__main__":

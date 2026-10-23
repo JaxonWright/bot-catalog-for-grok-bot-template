@@ -6,7 +6,7 @@ It reads the bot's full definition, strips anything personal, and shows you ever
 
 {{fallback}}
 
-Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.
+Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. Other people can suggest changes to your bots, but only you add bots to your catalog.
 
 ### {{second}}. Keep Up With the Template
 

@@ -23,7 +23,7 @@
 <!-- bots:start -->
 <table>
 <tr><th width="122"></th><th>Bot</th><th>Description</th><th width="190"></th></tr>
-<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.1.2</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
+<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.1.3</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
 </table>
 <!-- bots:end -->
 
@@ -87,7 +87,7 @@ If any check fails, show me the error and how you would fix it, and wait.
 
 </details>
 
-Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.
+Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. Other people can suggest changes to your bots, but only you add bots to your catalog.
 
 ### 3. Keep Up With the Template
 

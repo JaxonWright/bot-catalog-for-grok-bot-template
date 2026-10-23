@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3
+
+- Only you add bots to your catalog. Other people's pull requests can suggest changes to your bots but can't add new ones, so the Catalog Manager points them to a "Bot idea" issue instead.
+- It calls out any bot whose name looks like another bot's.
+- When an update is available, the Catalog Manager now compares it with what it runs today and tells you in its own words what would change, including anything the changelog leaves out.
+
 ## 1.1.2
 
 - Updating your catalog from the template deletes only the files the template removed, never workflows or other files you added yourself.

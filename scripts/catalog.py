@@ -522,8 +522,13 @@ def annotation(text: str, property: bool = False) -> str:
     return text.replace(":", "%3A").replace(",", "%2C") if property else text
 
 
+def report(kind: str, message: str) -> None:
+    # Actions reads workflow commands from any line of output, so a file name's line breaks are printed as \n.
+    print(f"{kind}: {message}".replace("\r", "\\r").replace("\n", "\\n"), file=sys.stderr)
+
+
 def warn(message: str, path: str | None = None) -> None:
-    print(f"warning: {message}", file=sys.stderr)
+    report("warning", message)
     if os.environ.get("GITHUB_ACTIONS"):
         print(f"::warning{f' file={annotation(path, property=True)}' if path else ''}::{annotation(message)}")
 
@@ -531,7 +536,7 @@ def warn(message: str, path: str | None = None) -> None:
 def cmd_check(args) -> int:
     if problems := link_problems():
         for problem in problems:
-            print(f"error: {problem}", file=sys.stderr)
+            report("error", problem)
         return 1
     catalog, bots = load_catalog(), load_bots()
     outputs = expected_outputs(catalog, bots)
@@ -565,7 +570,7 @@ def cmd_check(args) -> int:
             "Find it with the same entries in a local .private-denylist file, or ask the Catalog Manager"
         )
     for problem in problems:
-        print(f"error: {problem}", file=sys.stderr)
+        report("error", problem)
     if not problems:
         print(f"ok: {len(bots)} bot(s) checked")
     return 1 if problems else 0
@@ -632,7 +637,7 @@ def main() -> int:
     try:
         return args.run(args)
     except Invalid as error:
-        print(f"error: {error}", file=sys.stderr)
+        report("error", str(error))
         return 1
 
 
