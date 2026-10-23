@@ -10,7 +10,7 @@ import stat
 import subprocess
 import sys
 import tomllib
-from dataclasses import fields
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 from avatars import COLORS, SHAPES, render_avatar
@@ -29,12 +29,13 @@ LINK = re.compile(r"https?://[^\s)>\]\"'`]+")
 MARKUP = re.compile(r"[<>\[\]`]|https?://|www\.", re.I)
 
 PRIVATE_PATTERNS = {
-    "email address": re.compile(r"[\w.+-]+@(?!example\.(?:com|org)\b)[\w-]+\.[\w.-]+"),
-    "phone number": re.compile(r"(?<!\d)(?:\+?\d{1,2}[ .-])?\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}(?!\d)"),
+    # noreply addresses, like GitHub's and the Co-Authored-By trailer's, belong to nobody.
+    "email address": re.compile(r"(?<![\w.+-])(?!noreply@)[\w.+-]+@(?!(?:example\.(?:com|org)|users\.noreply\.github\.com)\b)[\w-]+\.[\w.-]+"),
+    "phone number": re.compile(r"(?<!\d)(?:\+?\d{1,2}[ .-])?\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}(?!\d)|(?<![\w+])\+\d[\d .()-]{7,}\d"),
     "private IP address": re.compile(
         r"(?<![\d.])(?:(?:10|127)(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?!\.?\d)"
     ),
-    "API key": re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|xai-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b"),
+    "API key": re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|xai-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{22,}|AKIA[0-9A-Z]{16})\b"),
 }
 
 
@@ -351,7 +352,21 @@ def new_links(base: str, bots: list[Bot]) -> list[tuple[str, str]]:
     return found
 
 
-def privacy_problems() -> list[str]:
+@dataclass(frozen=True)
+class Privacy:
+    patterns: dict[str, re.Pattern]
+    # PRIVATE_DENYLIST entries. CI logs are public, so a match never says which entry, file, or line it was.
+    secret: tuple[re.Pattern, ...]
+
+    def scan(self, lines: list[str], where: str) -> tuple[list[str], bool]:
+        problems, secret_hit = [], False
+        for number, line in enumerate(lines, 1):
+            problems += [f"{where}:{number}: possible {label}" for label, pattern in self.patterns.items() if pattern.search(line)]
+            secret_hit = secret_hit or any(pattern.search(line) for pattern in self.secret)
+        return problems, secret_hit
+
+
+def load_privacy() -> Privacy:
     def compile_terms(lines: list[str], label: str) -> dict[str, re.Pattern]:
         compiled = {}
         for i, term in enumerate(t.strip() for t in lines):
@@ -364,23 +379,60 @@ def privacy_problems() -> list[str]:
     local = ROOT / ".private-denylist"
     patterns = PRIVATE_PATTERNS | compile_terms(local.read_text().splitlines() if local.exists() else [], ".private-denylist entry")
     secret = compile_terms(os.environ.get("PRIVATE_DENYLIST", "").splitlines(), "PRIVATE_DENYLIST entry")
+    return Privacy(patterns, tuple(secret.values()))
 
+
+IMAGE_TYPES = {".png", ".gif", ".webp", ".jpg", ".jpeg"}
+# EXIF can hold where and when a photo was taken, and XMP can hold names.
+IMAGE_METADATA = (b"Exif\x00", b"<x:xmpmeta", b"eXIf")
+
+
+def privacy_problems(privacy: Privacy) -> tuple[list[str], bool]:
     problems, secret_hit = [], False
     for path in sorted([*BOTS.rglob("*"), *TEMPLATES.rglob("*")]):
-        if not path.is_file() or path.suffix.lower() in {".png", ".gif", ".webp"}:
+        where = str(path.relative_to(ROOT))
+        if not path.is_file():
             continue
-        for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
-            for label, pattern in patterns.items():
-                if pattern.search(line):
-                    problems.append(f"{path.relative_to(ROOT)}:{number}: possible {label}")
-            secret_hit = secret_hit or any(pattern.search(line) for pattern in secret.values())
-    # CI logs are public, so a PRIVATE_DENYLIST match never says which entry, file, or line it was.
-    if secret_hit:
-        problems.append(
-            "something matches an entry in the PRIVATE_DENYLIST secret. "
-            "Find it with the same entries in a local .private-denylist file, or ask the Catalog Manager"
-        )
-    return problems
+        if path.suffix.lower() in IMAGE_TYPES:
+            if any(marker in path.read_bytes() for marker in IMAGE_METADATA):
+                problems.append(f"{where} has EXIF or XMP metadata, which can include a location or names. Save it without metadata")
+            continue
+        found, hit = privacy.scan(path.read_text(errors="replace").splitlines(), where)
+        problems, secret_hit = problems + found, secret_hit or hit
+    return problems, secret_hit
+
+
+def public_email(address: str) -> bool:
+    allowed = {e.strip().lower() for e in re.split(r"[\s,]+", os.environ.get("PUBLIC_EMAILS", "")) if e.strip()}
+    address = address.lower()
+    return address.endswith("@users.noreply.github.com") or address == "noreply@github.com" or address in allowed
+
+
+def history_problems(privacy: Privacy, since: str, generated: set[str]) -> tuple[list[str], list[str], bool]:
+    """Every commit a pull request adds stays in master's history once it merges, even one a later commit undid."""
+    problems, email_problems, secret_hit = [], [], False
+    for line in git("log", "--format=%H%x09%ae%x09%ce", f"{since}..HEAD").splitlines():
+        sha, *emails = line.split("\t")
+        for kind, address in zip(("author", "committer"), emails):
+            if not public_email(address):
+                email_problems.append(
+                    f"commit {sha[:7]}: its {kind} email isn't a GitHub noreply address. Commit with the noreply address "
+                    "from https://github.com/settings/emails, or add the address to the PUBLIC_EMAILS repository variable"
+                )
+        found, hit = privacy.scan(git("log", "-1", "--format=%B", sha).splitlines(), f"commit {sha[:7]} message")
+        problems, secret_hit = problems + found, secret_hit or hit
+    log = git("log", "--no-merges", "--no-renames", "-p", "--unified=0", "--format=%x00%h", f"{since}..HEAD")
+    for commit in log.split("\0")[1:]:
+        sha, path, added = commit.split("\n", 1)[0], None, {}
+        for line in commit.splitlines():
+            if line.startswith("+++ "):
+                path = line[6:] if line.startswith("+++ b/") else None
+            elif line.startswith("+") and path and path not in generated and not path.startswith("dist/"):
+                added.setdefault(path, []).append(line[1:])
+        for path, lines in added.items():
+            found, hit = privacy.scan(lines, f"commit {sha} {path} added line")
+            problems, secret_hit = problems + found, secret_hit or hit
+    return problems, email_problems, secret_hit
 
 
 def cmd_build(_args) -> int:
@@ -401,14 +453,22 @@ REBUILD = (
 )
 
 
+def warn(message: str, path: str | None = None) -> None:
+    print(f"warning: {message}", file=sys.stderr)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning{f' file={path}' if path else ''}::{message}")
+
+
 def cmd_check(args) -> int:
     if problems := link_problems():
         for problem in problems:
-            print(f"error: {problem}")
+            print(f"error: {problem}", file=sys.stderr)
         return 1
     catalog, bots = load_catalog(), load_bots()
     outputs = expected_outputs(catalog, bots)
-    problems = privacy_problems() + version_problems(catalog, bots) + tag_problems(args.base or "HEAD")
+    privacy = load_privacy()
+    problems, secret_hit = privacy_problems(privacy)
+    problems += version_problems(catalog, bots) + tag_problems(args.base or "HEAD")
     if args.generated:
         for path, text in outputs.items():
             if not path.exists() or path.read_text() != text:
@@ -418,15 +478,27 @@ def cmd_check(args) -> int:
     if catalog.bots_license != "GPL-3.0" and not (ROOT / "LICENSE-BOTS").exists():
         problems.append(f"catalog.toml says the bots are {catalog.bots_license}, but LICENSE-BOTS is missing")
     if args.base:
-        problems += scope_problems(args.base) + unpublished_problems(args.base, bots)
+        # Compare with where the branch started, so changes merged into master since then don't count as this one's.
+        since = git("merge-base", args.base, "HEAD").strip()
+        problems += scope_problems(args.base) + unpublished_problems(since, bots)
+        found, email_problems, hit = history_problems(privacy, since, {str(p.relative_to(ROOT)) for p in outputs})
+        problems, secret_hit = problems + found, secret_hit or hit
         if args.fork:
-            problems += fork_path_problems(args.base, outputs) + share_url_problems(args.base, bots)
-        for path, url in new_links(args.base, bots):
-            print(f"warning: {path}: new link {url}")
-            if os.environ.get("GITHUB_ACTIONS"):
-                print(f"::warning file={path}::New link {url}. Make sure it belongs here before merging.")
+            # A contributor's email is theirs to share, so it's only a warning.
+            for problem in email_problems:
+                warn(problem)
+            problems += fork_path_problems(args.base, outputs) + share_url_problems(since, bots)
+        else:
+            problems += email_problems
+        for path, url in new_links(since, bots):
+            warn(f"{path}: new link {url}. Make sure it belongs here before merging", path)
+    if secret_hit:
+        problems.append(
+            "something matches an entry in the PRIVATE_DENYLIST secret. "
+            "Find it with the same entries in a local .private-denylist file, or ask the Catalog Manager"
+        )
     for problem in problems:
-        print(f"error: {problem}")
+        print(f"error: {problem}", file=sys.stderr)
     if not problems:
         print(f"ok: {len(bots)} bot(s) checked")
     return 1 if problems else 0
@@ -493,7 +565,7 @@ def main() -> int:
     try:
         return args.run(args)
     except Invalid as error:
-        print(f"error: {error}")
+        print(f"error: {error}", file=sys.stderr)
         return 1
 
 

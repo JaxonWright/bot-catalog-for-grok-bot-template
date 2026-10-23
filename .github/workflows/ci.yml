@@ -29,6 +29,8 @@ jobs:
       - name: Check bots and privacy
         env:
           PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
+          # Commit emails besides GitHub's noreply ones that may appear in this repository's history, if any.
+          PUBLIC_EMAILS: ${{ vars.PUBLIC_EMAILS }}
           BASE: ${{ github.event_name == 'pull_request' && github.base_ref || github.event_name == 'workflow_dispatch' && 'master' || '' }}
         run: |
           args=(--generated)
