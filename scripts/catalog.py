@@ -39,7 +39,8 @@ PRIVATE_PATTERNS = {
     "private IP address": re.compile(
         r"(?<![\d.])(?:(?:10|127)(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})(?!\.?\d)"
     ),
-    "API key": re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|xai-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{22,}|AKIA[0-9A-Z]{16})\b"),
+    "API key": re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|xai-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{22,}|AKIA[0-9A-Z]{16}|AIza[\w-]{35}|xox[abposr]-[\w-]{10,})\b"),
+    "private key": re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----"),
 }
 
 
@@ -155,6 +156,8 @@ def load_catalog() -> Catalog:
         if not isinstance(value, list if types[key] is tuple else types[key]):
             raise Invalid(f"catalog.toml: {key} has the wrong type")
     catalog = Catalog(**data | {"template_paths": tuple(data.get("template_paths", ()))})
+    if catalog.author_url and not re.match(r"https?://", catalog.author_url):
+        raise Invalid("catalog.toml: author_url must be empty or start with https://")
     if catalog.bots_license not in BOT_LICENSES:
         raise Invalid(f"catalog.toml: bots_license must be one of {', '.join(BOT_LICENSES)}")
     return catalog
@@ -177,7 +180,15 @@ def link_problems() -> list[str]:
 def load_bots() -> list[Bot]:
     if not BOTS.exists():
         return []
-    return [load_bot(d) for d in sorted(BOTS.iterdir()) if d.is_dir()]
+    bots = [load_bot(d) for d in sorted(BOTS.iterdir()) if d.is_dir()]
+    # A look-alike of another bot's name could pass for it in the README.
+    seen = {}
+    for bot in bots:
+        key = re.sub(r"[\W_]+", "", bot.name.casefold())
+        if key in seen:
+            raise Invalid(f"bots/{bot.slug}: its name is too close to bots/{seen[key]}'s. Give each bot a distinct name")
+        seen[key] = bot.slug
+    return bots
 
 
 def fill(template: str, catalog: Catalog, bot: Bot) -> str:
@@ -334,21 +345,31 @@ def changed_paths(base: str) -> list[str]:
     return git("diff", "--name-only", "--no-renames", f"{base}...HEAD").split()
 
 
-def fork_path_problems(base: str, outputs: dict[Path, str]) -> list[str]:
-    """A fork may change bots, plus generated files only when they match what build would write."""
+def fork_problems(base: str, since: str, catalog: Catalog, bots: list[Bot], outputs: dict[Path, str]) -> list[str]:
+    """A fork may suggest changes to the catalog's existing bots, and nothing else.
+
+    It can't add a bot, because a catalog holds its owner's bots. Generated files may change only to exactly what build
+    writes, and README.md only in its generated sections, since prose outside them is the owner's.
+    """
     generated = {str(path.relative_to(ROOT)): text for path, text in outputs.items()}
-    problems = []
-    for path in changed_paths(base):
-        if path.startswith("bots/") and path not in generated:
-            continue
+    generated[str(README.relative_to(ROOT))] = render_readme(catalog, bots, text_at(since, "README.md"))
+    paths = changed_paths(base)
+    problems = [
+        f"bots/{slug}: a pull request from a fork can only change this catalog's existing bots. "
+        "Suggest a new bot to its owner in an issue instead"
+        for slug in sorted({p.split("/")[1] for p in paths if p.startswith("bots/") and p.count("/") >= 2})
+        if not text_at(since, f"bots/{slug}/bot.toml") or not (BOTS / slug / "bot.toml").exists()
+    ]
+    for path in paths:
         current = ROOT / path
-        if path in generated and current.is_file() and current.read_text() == generated[path]:
-            continue
-        if path.startswith("dist/") and not current.exists():
+        if path in generated:
+            if current.is_file() and current.read_text() == generated[path]:
+                continue
+        elif path.startswith("bots/") or (path.startswith("dist/") and not current.exists()):
             continue
         problems.append(
-            f"{path}: a pull request from a fork can only change files in bots/. "
-            "A maintainer makes changes to anything else, after reviewing them"
+            f"{path}: a pull request from a fork can only change files in bots/, and generated files only as the build "
+            "writes them. A maintainer makes changes to anything else, after reviewing them"
         )
     return problems
 
@@ -495,10 +516,16 @@ REBUILD = (
 )
 
 
+def annotation(text: str, property: bool = False) -> str:
+    """Escapes text for a GitHub Actions workflow command, so a file name or link can't start a command of its own."""
+    text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    return text.replace(":", "%3A").replace(",", "%2C") if property else text
+
+
 def warn(message: str, path: str | None = None) -> None:
     print(f"warning: {message}", file=sys.stderr)
     if os.environ.get("GITHUB_ACTIONS"):
-        print(f"::warning{f' file={path}' if path else ''}::{message}")
+        print(f"::warning{f' file={annotation(path, property=True)}' if path else ''}::{annotation(message)}")
 
 
 def cmd_check(args) -> int:
@@ -522,11 +549,14 @@ def cmd_check(args) -> int:
     if args.base:
         # Compare with where the branch started, so changes merged into master since then don't count as this one's.
         since = git("merge-base", args.base, "HEAD").strip()
-        problems += scope_problems(args.base, since) + unpublished_problems(since, bots)
+        problems += scope_problems(args.base, since)
         found, hit = history_problems(privacy, since, {str(p.relative_to(ROOT)) for p in outputs})
         problems, secret_hit = problems + found, secret_hit or hit
         if args.fork:
-            problems += fork_path_problems(args.base, outputs) + share_url_problems(since, bots)
+            problems += fork_problems(args.base, since, catalog, bots, outputs) + share_url_problems(since, bots)
+        else:
+            # A fork can't add a bot at all, so only a pull request from this repository can be missing its link.
+            problems += unpublished_problems(since, bots)
         for path, url in new_links(since, bots):
             warn(f"{path}: new link {url}. Make sure it belongs here before merging", path)
     if secret_hit:

@@ -164,8 +164,9 @@ def replace_between(text: str, start_marker: str, end_marker: str, body: str) ->
     return f"{text[:start]}{inner}{text[end:]}"
 
 
-def render_readme(catalog: Catalog, bots: list[Bot]) -> str:
-    text = replace_between(README.read_text(), HEADER_START, HEADER_END, render_byline(catalog))
+def render_readme(catalog: Catalog, bots: list[Bot], readme: str | None = None) -> str:
+    """Fills the generated sections of readme, the README.md on disk by default. Everything else stays as written."""
+    text = replace_between(README.read_text() if readme is None else readme, HEADER_START, HEADER_END, render_byline(catalog))
     text = replace_between(text, NOTE_START, NOTE_END, prose("template-note") if catalog.template else "")
     text = replace_between(text, GUIDE_START, GUIDE_END, render_guide(catalog))
     text = replace_between(text, MAINTAIN_START, MAINTAIN_END, render_maintain(catalog))
