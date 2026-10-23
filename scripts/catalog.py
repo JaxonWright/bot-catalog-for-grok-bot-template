@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 from avatars import COLORS, DARK_MODE_STYLE, SHAPES, avatar_body
@@ -97,7 +97,6 @@ class Catalog:
     template_paths: list[str]
     bots_license: str
     release_branch: str
-    dev_branch: str
 
 
 class Invalid(Exception):
@@ -193,7 +192,9 @@ def load_bot(directory: Path) -> Bot:
 
 
 def load_catalog() -> Catalog:
-    catalog = Catalog(**read_toml(ROOT / "catalog.toml"))
+    # Older catalogs can carry keys the template has since dropped, like dev_branch.
+    known = {f.name for f in fields(Catalog)}
+    catalog = Catalog(**{k: v for k, v in read_toml(ROOT / "catalog.toml").items() if k in known})
     if catalog.bots_license not in BOT_LICENSES:
         raise Invalid(f"catalog.toml: bots_license must be one of {', '.join(BOT_LICENSES)}")
     return catalog
@@ -449,7 +450,6 @@ def guide_prompts(catalog: Catalog):
         "repo": repo,
         "template_repo": catalog.template_repo,
         "release_branch": catalog.release_branch,
-        "dev_branch": catalog.dev_branch,
     }
 
     def prompt(name: str) -> str:
@@ -482,10 +482,10 @@ def manage_steps(catalog: Catalog, heading: str, first: int) -> list[str]:
         "",
         "Tell your Catalog Manager *Share my &lt;bot name&gt;*. Say the same thing later to ship an improvement to a bot you already share.",
         "",
-        "It reads the bot's full definition, strips anything personal, and shows you every file plus what it removed. After your yes, it does the rest. It adds the bot to your catalog and releases it. For a new bot, it also creates the public copy that carries the update check and puts its **Add Grok Bot** button in the README. People who already added the bot are offered the update within a day.",
+        "It reads the bot's full definition, strips anything personal, and shows you every file plus what it removed. After your yes, it does the rest. It opens a pull request for the bot. For a new bot, it also creates the public copy that carries the update check and adds its share link, so the bot appears in the README with its **Add Grok Bot** button. Merging the pull request releases the bot. People who already added the bot are offered the update within a day.",
         *fallback(catalog, "Without the Catalog Manager, paste this into the bot you want to share.", "share-bot", "2-share-a-bot", "the bot you want to share"),
         "",
-        "Merged a pull request from someone else? Tell your Catalog Manager *Release my catalog* to send it out.",
+        "Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.",
         "",
         f"{heading} {first + 1}. Keep Up With the Template",
         "",
@@ -588,6 +588,28 @@ def share_url_problems(base: str, bots: list[Bot]) -> list[str]:
     return problems
 
 
+def changed_paths(base: str) -> list[str]:
+    return git("diff", "--name-only", f"{base}...HEAD").split()
+
+
+def scope_problems(base: str) -> list[str]:
+    paths = changed_paths(base)
+    slugs = sorted({p.split("/")[1] for p in paths if p.startswith("bots/") and p.count("/") >= 2})
+    # A change to the shared update check or scripts bumps every bot at once.
+    if len(slugs) > 1 and not any(p.startswith(("catalog/", "scripts/")) for p in paths):
+        return [f"this pull request changes {len(slugs)} bots ({', '.join(slugs)}). Split it into one pull request per bot"]
+    return []
+
+
+def unpublished_problems(base: str, bots: list[Bot]) -> list[str]:
+    return [
+        f"bots/{bot.slug} is a new bot, so it needs share_url before it merges. "
+        "The catalog's owner publishes it from this pull request and adds the link"
+        for bot in bots
+        if not bot.share_url and not text_at(base, f"bots/{bot.slug}/bot.toml")
+    ]
+
+
 def new_links(base: str, bots: list[Bot]) -> list[tuple[str, str]]:
     found = []
     for bot in bots:
@@ -633,18 +655,25 @@ def cmd_build(_args) -> int:
     return 0
 
 
+REBUILD = (
+    "The Build workflow regenerates it on pull request branches in this repository, "
+    "or run python scripts/catalog.py build"
+)
+
+
 def cmd_check(args) -> int:
     catalog, bots = load_catalog(), load_bots()
     problems = privacy_problems() + version_problems(catalog, bots)
     if args.generated:
         for path, text in expected_outputs(catalog, bots).items():
             if not path.exists() or path.read_text() != text:
-                problems.append(f"{path.relative_to(ROOT)} is out of date. The Build workflow regenerates it on {catalog.dev_branch}")
+                problems.append(f"{path.relative_to(ROOT)} is out of date. {REBUILD}")
         extra = set(DIST.glob("*.md")) - {DIST / f"{b.slug}.md" for b in bots}
-        problems += [f"{p.relative_to(ROOT)} has no matching bot. The Build workflow removes it on {catalog.dev_branch}" for p in extra]
+        problems += [f"{p.relative_to(ROOT)} has no matching bot. {REBUILD}" for p in extra]
     if catalog.bots_license != "GPL-3.0" and not (ROOT / "LICENSE-BOTS").exists():
         problems.append(f"catalog.toml says the bots are {catalog.bots_license}, but LICENSE-BOTS is missing")
     if args.base:
+        problems += scope_problems(args.base) + unpublished_problems(args.base, bots)
         if args.fork:
             problems += share_url_problems(args.base, bots)
         for path, url in new_links(args.base, bots):
@@ -694,7 +723,7 @@ def main() -> int:
     commands = parser.add_subparsers(required=True)
     commands.add_parser("build", help="regenerate README.md's bot table and dist/").set_defaults(run=cmd_build)
     check = commands.add_parser("check", help="validate bots, privacy, and generated files")
-    check.add_argument("--base", help="git ref to compare against for new links and share_url changes, e.g. origin/dev")
+    check.add_argument("--base", help="git ref a pull request merges into, e.g. origin/master, to check what it changes")
     check.add_argument("--fork", action="store_true", help="the changes come from a fork, so share_url must not change")
     check.add_argument("--generated", action="store_true", help="also require README.md, avatars, and dist/ to be up to date")
     check.set_defaults(run=cmd_check)

@@ -23,7 +23,7 @@
 <!-- bots:start -->
 <table>
 <tr><th width="122"></th><th>Bot</th><th>Description</th><th width="190"></th></tr>
-<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.0.2</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
+<tr><td width="122" align="center"><img src="bots/catalog-manager/avatar.svg" width="96" height="96" alt=""></td><td><a href="bots/catalog-manager"><b>Catalog Manager</b></a><br><sub>v1.1.0</sub></td><td>Sets up your own Bot Catalog repository and runs it for you. It shares your bots, keeps them up to date, and keeps your catalog current with the template.</td><td width="190" align="center"><a href="https://x.ai/bot/dT_y9MBRyJCsHKmEPL5UR"><img src="assets/add-grok-bot.svg" width="164" alt="Add Grok Bot"></a></td></tr>
 </table>
 <!-- bots:end -->
 
@@ -50,7 +50,7 @@ Set up my own Bot Catalog for Grok Bot on GitHub. Use the GitHub connector. If i
 1. Ask me how I want to be credited on the catalog (my name, X handle, or GitHub username) and which link my name should go to. Ask me which license my bots should use: GPL-3.0, MIT, Apache-2.0, or CC0-1.0. Explain that GPL-3.0 keeps changed copies open, MIT and Apache-2.0 let anyone reuse them with credit, and CC0-1.0 puts them in the public domain. The template's own scripts and docs stay GPL-3.0 either way. Ask me for the personal details that must never be published: my names, email addresses, handles, phone numbers, street address, employer, and anything else I name. Keep that list private. Never write it anywhere except the secret in step 5.
 2. Create a new repository from the template https://github.com/JaxonWright/bot-catalog-for-grok-bot-template. In the browser, that is "Use this template", then "Create a new repository". Name it `bot-catalog-for-grok-bot`, make it Public, and create it.
 3. In the new repository, enable GitHub Actions if it is off, and run the "Set up catalog" workflow on the `master` branch with my credit, link, and license from step 1 as its inputs. Wait until the run finishes with a green check.
-4. Protect the repository by adding the three rulesets in its `.github/rulesets/` folder, `protect-master.json`, `protect-dev.json`, and `protect-release-tags.json`, exactly as written. In the browser, that is Settings, then Rules, then Rulesets, then "New ruleset", then "Import a ruleset", once for each file. Then turn on private vulnerability reporting, which in the browser is Settings, then Security, then "Private vulnerability reporting". Then turn on automatic deletion of merged branches, which in the browser is Settings, then General, then "Automatically delete head branches".
+4. Protect the repository by adding the two rulesets in its `.github/rulesets/` folder, `protect-master.json` and `protect-release-tags.json`, exactly as written. In the browser, that is Settings, then Rules, then Rulesets, then "New ruleset", then "Import a ruleset", once for each file. Then turn on private vulnerability reporting, which in the browser is Settings, then Security, then "Private vulnerability reporting". Then turn on automatic deletion of merged branches, which in the browser is Settings, then General, then "Automatically delete head branches".
 5. Add a repository secret named `PRIVATE_DENYLIST` that holds my private details from step 1, one per line. In the browser, that is Settings, then Secrets and variables, then Actions.
 6. Tell me the repository link, and that its README's "Maintain This Catalog" section has the next steps for sharing my bots.
 ```
@@ -63,7 +63,7 @@ Once your catalog exists, its README has a **Maintain This Catalog** section wit
 
 Tell your Catalog Manager *Share my &lt;bot name&gt;*. Say the same thing later to ship an improvement to a bot you already share.
 
-It reads the bot's full definition, strips anything personal, and shows you every file plus what it removed. After your yes, it does the rest. It adds the bot to your catalog and releases it. For a new bot, it also creates the public copy that carries the update check and puts its **Add Grok Bot** button in the README. People who already added the bot are offered the update within a day.
+It reads the bot's full definition, strips anything personal, and shows you every file plus what it removed. After your yes, it does the rest. It opens a pull request for the bot. For a new bot, it also creates the public copy that carries the update check and adds its share link, so the bot appears in the README with its **Add Grok Bot** button. Merging the pull request releases the bot. People who already added the bot are offered the update within a day.
 
 <details><summary>Without the Catalog Manager, paste this into the bot you want to share.</summary>
 
@@ -77,9 +77,9 @@ That repository is public. Anything pushed to it, including branches, commits, a
 3. Remove everything personal: names, email addresses, accounts, handles, phone numbers, addresses, links to private files or tools, keys, and anything you know only from your memory or our conversations. Where a skill needs one of those, have it ask the user and remember the answer instead.
 4. If you are already in the catalog, bump `version` in `bot.toml`: patch for wording fixes, minor for new skills or routines, major for changes to what you do on your own. Add a changelog section for the new version that says what changes for the people using you.
 5. Show me every file in full, then a separate list of everything you removed. Wait until I say it looks good. My yes covers the rest of these steps.
-6. Create a branch off `dev`, commit the approved files exactly as approved, open a pull request into `dev`, and merge it once its check passes. Keep the commit message and pull request description to what changes for users, and never mention what you removed.
-7. If you were not in the catalog before, publish yourself. Wait for the Build workflow on `dev` to finish. Create a new Bot and have it fetch https://raw.githubusercontent.com/YOUR-USER/bot-catalog-for-grok-bot/dev/dist/<slug>.md and set itself up exactly as that file's "How to apply" section says, with your name. It sets its avatar with Grok Bot's built-in default mark, using the shape and color in `bot.toml`, and must not generate or upload a custom picture; if one is installed, it clears it. In that new Bot, open Share, choose "Create template", pick "Public link", and copy the link. Then put the link in `share_url` in `bots/<slug>/bot.toml` through another pull request into `dev`, and merge it once its check passes.
-8. Release. Open a pull request from `dev` into `master` titled "Release", and merge it once its check passes. If the check says generated files are out of date, wait a few minutes for the Build workflow and look again.
+6. Create a branch off `master`, commit the approved files exactly as approved, and open a pull request into `master`. Keep the commit message and pull request description to what changes for users, and never mention what you removed. Wait for the Build workflow to add the generated files and for the check to finish.
+7. If you were not in the catalog before, the check fails until you have a share link, so publish yourself. Create a new Bot and have it fetch https://raw.githubusercontent.com/YOUR-USER/bot-catalog-for-grok-bot/<your branch>/dist/<slug>.md and set itself up exactly as that file's "How to apply" section says, with your name. It sets its avatar with Grok Bot's built-in default mark, using the shape and color in `bot.toml`, and must not generate or upload a custom picture; if one is installed, it clears it. In that new Bot, open Share, choose "Create template", pick "Public link", and copy the link. Then set `share_url` in `bots/<slug>/bot.toml` to the link on the same branch, and change nothing else.
+8. Merge the pull request once its check passes. That releases you.
 9. Tell me it's live. If you were new, give me your share link.
 
 If any check fails, show me the error and how you would fix it, and wait.
@@ -87,7 +87,7 @@ If any check fails, show me the error and how you would fix it, and wait.
 
 </details>
 
-Merged a pull request from someone else? Tell your Catalog Manager *Release my catalog* to send it out.
+Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.
 
 ### 3. Keep Up With the Template
 

@@ -62,6 +62,3 @@ jobs:
             git commit -m "Set up the catalog for $GITHUB_REPOSITORY"
             git push origin HEAD:master
           fi
-          if ! git push origin HEAD:refs/heads/dev; then
-            echo "::warning::dev has changes that master doesn't. Merge master into dev so dev uses these settings."
-          fi

@@ -12,5 +12,5 @@ template_repo = "JaxonWright/bot-catalog-for-grok-bot-template"
 template_paths = [".github/", ".githooks/", "scripts/", "catalog/", "docs/", "assets/add-grok-bot.svg", "CONTRIBUTING.md", "SECURITY.md", ".gitignore"]
 # License for the bots in bots/. Anything other than GPL-3.0 needs its text in LICENSE-BOTS. The template's own files stay GPL-3.0.
 bots_license = "GPL-3.0"
+# The branch installed bots read their version from.
 release_branch = "master"
-dev_branch = "dev"
