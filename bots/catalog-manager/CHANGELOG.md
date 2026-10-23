@@ -4,6 +4,7 @@
 
 - Only you add bots to your catalog. Other people's pull requests can suggest changes to your bots but can't add new ones, so the Catalog Manager points them to a "Bot idea" issue instead.
 - It calls out any bot whose name looks like another bot's.
+- Setting up a catalog tells you who can read the `PRIVATE_DENYLIST` secret, everyone with write access to your catalog, and suggests leaving it out. The Catalog Manager removes personal details from everything itself, and you see every file before it's published.
 - When an update is available, the Catalog Manager now compares it with what it runs today and tells you in its own words what would change, including anything the changelog leaves out.
 
 ## 1.1.2
