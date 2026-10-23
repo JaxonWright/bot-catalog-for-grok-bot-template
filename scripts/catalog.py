@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tomllib
@@ -46,6 +47,8 @@ ICON_TYPES = {".svg", ".gif", ".webp", ".png"}
 ICON_NAME = re.compile(r"[\w-]+(\.[\w-]+)*")
 SHARE_URL = re.compile(r"https://x\.ai/bot/[\w-]+")
 LINK = re.compile(r"https?://[^\s)>\]\"'`]+")
+# Characters that would start markdown or HTML in the bundle's headings and Schedule lines, which sit outside code blocks.
+MARKUP = re.compile(r"[<>\[\]`]|https?://|www\.", re.I)
 BOT_LICENSES = {
     "GPL-3.0": ("GNU General Public License v3.0", "If you share a changed version, it must stay under the GPL-3.0 and include its source."),
     "MIT": ("MIT License", "Keep the copyright notice when you share them."),
@@ -119,12 +122,22 @@ def read_toml(path: Path) -> dict:
         raise Invalid(f"{path.relative_to(ROOT)}: {error}") from None
 
 
+def one_line(data: dict, key: str, where: str, limit: int) -> str:
+    value = data[key]
+    if not isinstance(value, str) or not value.strip() or len(value) > limit or not value.isprintable() or MARKUP.search(value):
+        raise Invalid(f"{where}: {key} must be one line of plain text, up to {limit} characters, with no links, <, >, [, ], or `")
+    return value.strip()
+
+
 def load_routine(path: Path) -> Routine:
     data = read_toml(path)
+    where = str(path.relative_to(ROOT))
     missing = {"name", "schedule", "instructions"} - data.keys()
     if missing:
-        raise Invalid(f"{path.relative_to(ROOT)} is missing {', '.join(sorted(missing))}")
-    return Routine(data["name"], data["schedule"], data["instructions"].strip())
+        raise Invalid(f"{where} is missing {', '.join(sorted(missing))}")
+    if not isinstance(data["instructions"], str):
+        raise Invalid(f"{where}: instructions must be text")
+    return Routine(one_line(data, "name", where, 80), one_line(data, "schedule", where, 120), data["instructions"].strip())
 
 
 def load_skill(path: Path) -> tuple[str, str]:
@@ -132,7 +145,7 @@ def load_skill(path: Path) -> tuple[str, str]:
     first, _, body = text.partition("\n")
     if not first.startswith("# "):
         raise Invalid(f"{path.relative_to(ROOT)} must start with a '# Skill name' heading")
-    return first[2:].strip(), body.strip()
+    return one_line({"name": first[2:]}, "name", str(path.relative_to(ROOT)), 80), body.strip()
 
 
 def load_bot(directory: Path) -> Bot:
@@ -147,7 +160,7 @@ def load_bot(directory: Path) -> Bot:
     missing = {"name", "version", "summary"} - meta.keys()
     if missing:
         raise Invalid(f"{where}/bot.toml is missing {', '.join(sorted(missing))}")
-    if not SEMVER.match(meta["version"]):
+    if not isinstance(meta["version"], str) or not SEMVER.match(meta["version"]):
         raise Invalid(f"{where}/bot.toml: version must look like 1.2.3")
     if ("avatar" in meta) == ("icon" in meta):
         raise Invalid(f"{where}/bot.toml: set either avatar = {{ shape, color }} or icon = \"<file>\", not both")
@@ -163,8 +176,9 @@ def load_bot(directory: Path) -> Bot:
         icon = directory / meta["icon"]
         if not ICON_NAME.fullmatch(meta["icon"]) or icon.suffix.lower() not in ICON_TYPES or not icon.is_file():
             raise Invalid(f"{where}: icon must be an existing {'/'.join(sorted(ICON_TYPES))} file")
-    if any(re.search(r"https?://|www\.", meta[key], re.I) for key in ("name", "summary")):
-        raise Invalid(f"{where}/bot.toml: name and summary can't contain links")
+    name = one_line(meta, "name", f"{where}/bot.toml", 60)
+    if not isinstance(meta["summary"], str) or re.search(r"https?://|www\.", meta["summary"], re.I):
+        raise Invalid(f"{where}/bot.toml: summary must be text with no links")
     share_url = meta.get("share_url", "")
     if share_url and not SHARE_URL.fullmatch(share_url):
         raise Invalid(f"{where}/bot.toml: share_url must be empty or a Grok Bot share link like https://x.ai/bot/abc123")
@@ -177,7 +191,7 @@ def load_bot(directory: Path) -> Bot:
         raise Invalid(f"{where}/CHANGELOG.md needs a '## {meta['version']}' section")
     return Bot(
         slug=slug,
-        name=meta["name"],
+        name=name,
         version=meta["version"],
         summary=meta["summary"].strip(),
         icon=AVATAR_FILE if avatar else meta["icon"],
@@ -198,6 +212,20 @@ def load_catalog() -> Catalog:
     if catalog.bots_license not in BOT_LICENSES:
         raise Invalid(f"catalog.toml: bots_license must be one of {', '.join(BOT_LICENSES)}")
     return catalog
+
+
+def link_problems() -> list[str]:
+    """Symlinks and special files among what build reads and writes, which could pull in files like .git/config."""
+    paths = [ROOT / "catalog.toml", README, BOTS, TEMPLATES, ROOT / "docs", ROOT / "assets", DIST]
+    for directory in [p for p in paths if p.is_dir() and not p.is_symlink()]:
+        for top, dirs, files in os.walk(directory):
+            paths += [Path(top) / name for name in dirs + files]
+    return [
+        f"{path.relative_to(ROOT)} is a symlink or special file. Replace it with a regular file"
+        for path in paths
+        if path.exists() or path.is_symlink()
+        if not (stat.S_ISDIR(path.lstat().st_mode) or stat.S_ISREG(path.lstat().st_mode))
+    ]
 
 
 def load_bots() -> list[Bot]:
@@ -592,6 +620,34 @@ def changed_paths(base: str) -> list[str]:
     return git("diff", "--name-only", f"{base}...HEAD").split()
 
 
+def fork_path_problems(base: str, outputs: dict[Path, str]) -> list[str]:
+    """A fork may change bots, plus generated files only when they match what build would write."""
+    generated = {str(path.relative_to(ROOT)): text for path, text in outputs.items()}
+    problems = []
+    for path in changed_paths(base):
+        if path.startswith("bots/") and path not in generated:
+            continue
+        current = ROOT / path
+        if path in generated and current.is_file() and current.read_text() == generated[path]:
+            continue
+        if path.startswith("dist/") and not current.exists():
+            continue
+        problems.append(
+            f"{path}: a pull request from a fork can only change files in bots/. "
+            "A maintainer makes changes to anything else, after reviewing them"
+        )
+    return problems
+
+
+def tag_problems(branch: str) -> list[str]:
+    """Release tags must sit on the release branch, so nobody can tag a version ahead of the Release workflow."""
+    problems = []
+    for tag in git("tag", "--list", "*-v*").split():
+        if subprocess.run(["git", "merge-base", "--is-ancestor", tag, branch], cwd=ROOT, capture_output=True).returncode:
+            problems.append(f"tag {tag} isn't on {branch}. Installed bots would install it, so delete it before its version is released")
+    return problems
+
+
 def scope_problems(base: str) -> list[str]:
     paths = changed_paths(base)
     slugs = sorted({p.split("/")[1] for p in paths if p.startswith("bots/") and p.count("/") >= 2})
@@ -623,18 +679,20 @@ def new_links(base: str, bots: list[Bot]) -> list[tuple[str, str]]:
 
 
 def privacy_problems() -> list[str]:
-    patterns = dict(PRIVATE_PATTERNS)
-    denylist = os.environ.get("PRIVATE_DENYLIST", "").splitlines()
-    local = ROOT / ".private-denylist"
-    if local.exists():
-        denylist += local.read_text().splitlines()
-    for i, term in enumerate(t.strip() for t in denylist):
-        if term and not term.startswith("#"):
-            # Whole words only. An entry with a capital letter matches that exact case, so "Will" skips "will".
-            flags = 0 if term != term.lower() else re.I
-            patterns[f"private denylist entry #{i + 1}"] = re.compile(rf"(?<!\w){re.escape(term)}(?!\w)", flags)
+    def compile_terms(lines: list[str], label: str) -> dict[str, re.Pattern]:
+        compiled = {}
+        for i, term in enumerate(t.strip() for t in lines):
+            if term and not term.startswith("#"):
+                # Whole words only. An entry with a capital letter matches that exact case, so "Will" skips "will".
+                flags = 0 if term != term.lower() else re.I
+                compiled[f"{label} #{i + 1}"] = re.compile(rf"(?<!\w){re.escape(term)}(?!\w)", flags)
+        return compiled
 
-    problems = []
+    local = ROOT / ".private-denylist"
+    patterns = PRIVATE_PATTERNS | compile_terms(local.read_text().splitlines() if local.exists() else [], ".private-denylist entry")
+    secret = compile_terms(os.environ.get("PRIVATE_DENYLIST", "").splitlines(), "PRIVATE_DENYLIST entry")
+
+    problems, secret_hit = [], False
     for path in sorted([*BOTS.rglob("*"), *TEMPLATES.rglob("*")]):
         if not path.is_file() or path.suffix.lower() in {".png", ".gif", ".webp"}:
             continue
@@ -642,10 +700,19 @@ def privacy_problems() -> list[str]:
             for label, pattern in patterns.items():
                 if pattern.search(line):
                     problems.append(f"{path.relative_to(ROOT)}:{number}: possible {label}")
+            secret_hit = secret_hit or any(pattern.search(line) for pattern in secret.values())
+    # CI logs are public, so a PRIVATE_DENYLIST match never says which entry, file, or line it was.
+    if secret_hit:
+        problems.append(
+            "something matches an entry in the PRIVATE_DENYLIST secret. "
+            "Find it with the same entries in a local .private-denylist file, or ask the Catalog Manager"
+        )
     return problems
 
 
 def cmd_build(_args) -> int:
+    if problems := link_problems():
+        raise Invalid(problems[0])
     for path, text in expected_outputs(load_catalog(), load_bots()).items():
         path.parent.mkdir(exist_ok=True)
         path.write_text(text)
@@ -662,10 +729,15 @@ REBUILD = (
 
 
 def cmd_check(args) -> int:
+    if problems := link_problems():
+        for problem in problems:
+            print(f"error: {problem}")
+        return 1
     catalog, bots = load_catalog(), load_bots()
-    problems = privacy_problems() + version_problems(catalog, bots)
+    outputs = expected_outputs(catalog, bots)
+    problems = privacy_problems() + version_problems(catalog, bots) + tag_problems(args.base or "HEAD")
     if args.generated:
-        for path, text in expected_outputs(catalog, bots).items():
+        for path, text in outputs.items():
             if not path.exists() or path.read_text() != text:
                 problems.append(f"{path.relative_to(ROOT)} is out of date. {REBUILD}")
         extra = set(DIST.glob("*.md")) - {DIST / f"{b.slug}.md" for b in bots}
@@ -675,7 +747,7 @@ def cmd_check(args) -> int:
     if args.base:
         problems += scope_problems(args.base) + unpublished_problems(args.base, bots)
         if args.fork:
-            problems += share_url_problems(args.base, bots)
+            problems += fork_path_problems(args.base, outputs) + share_url_problems(args.base, bots)
         for path, url in new_links(args.base, bots):
             print(f"warning: {path}: new link {url}")
             if os.environ.get("GITHUB_ACTIONS"):
@@ -704,7 +776,12 @@ def cmd_configure(args) -> int:
     return cmd_build(args)
 
 
-def cmd_unreleased(_args) -> int:
+def cmd_unreleased(args) -> int:
+    # A new copy of the template still says it's the template until "Set up catalog" runs, so its bots aren't its own yet.
+    repo = load_catalog().repo
+    if args.repo and args.repo.lower() != repo.lower():
+        print(f"catalog.toml says this is {repo}, not {args.repo}, so nothing is released until it's set up", file=sys.stderr)
+        return 0
     tags = set(git("tag", "--list").split())
     for bot in load_bots():
         if f"{bot.slug}-v{bot.version}" not in tags:
@@ -724,7 +801,7 @@ def main() -> int:
     commands.add_parser("build", help="regenerate README.md's bot table and dist/").set_defaults(run=cmd_build)
     check = commands.add_parser("check", help="validate bots, privacy, and generated files")
     check.add_argument("--base", help="git ref a pull request merges into, e.g. origin/master, to check what it changes")
-    check.add_argument("--fork", action="store_true", help="the changes come from a fork, so share_url must not change")
+    check.add_argument("--fork", action="store_true", help="the changes come from a fork, so only bots/ may change, and share_url must not")
     check.add_argument("--generated", action="store_true", help="also require README.md, avatars, and dist/ to be up to date")
     check.set_defaults(run=cmd_check)
     configure = commands.add_parser("configure", help="set catalog.toml values, then rebuild")
@@ -733,7 +810,9 @@ def main() -> int:
     configure.add_argument("--bots-license", dest="bots_license", choices=list(BOT_LICENSES), help="license for the bots in this catalog")
     configure.add_argument("--template", choices=["true", "false"], help="show the README note that this repo is a template")
     configure.set_defaults(run=cmd_configure)
-    commands.add_parser("unreleased", help="print 'slug version' for each bot without a release tag").set_defaults(run=cmd_unreleased)
+    unreleased = commands.add_parser("unreleased", help="print 'slug version' for each bot without a release tag")
+    unreleased.add_argument("--repo", help="owner/name of this repository. Prints nothing unless catalog.toml's repo matches")
+    unreleased.set_defaults(run=cmd_unreleased)
     notes = commands.add_parser("notes", help="print the changelog section for a bot's current version")
     notes.add_argument("slug")
     notes.set_defaults(run=cmd_notes)

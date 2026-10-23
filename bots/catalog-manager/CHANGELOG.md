@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- It moves a pull request from a fork into your catalog only when the Fork check passed, so a moved pull request changes nothing outside `bots/` and never sets a share link.
+- Retiring the `dev` branch now happens in an order that works. It merges what's waiting on `dev` first, removes the "Protect dev" ruleset, deletes `dev`, and then updates your catalog from the template. Sharing a bot runs this first if your catalog still has `dev`.
+- When a template update changes a ruleset, it tells you how to replace the ruleset in your repository's settings.
+
 ## 1.1.0
 
 - Catalogs no longer have a `dev` branch. Each bot's pull request goes straight into `master`, and merging it releases the bot. The "Release" skill is gone, because there is nothing left to release by hand.
