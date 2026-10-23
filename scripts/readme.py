@@ -4,13 +4,11 @@ import html
 from pathlib import Path
 
 from avatars import ANIMATION_STYLE, avatar_body
-from model import BOT_LICENSES, PROMPTS, README, ROOT, Bot, Catalog, fence, substitute
+from model import BOT_LICENSES, PROMPTS, README, ROOT, TEMPLATES, Bot, Catalog, fence, substitute
 from wordmark import STROKE, bubble_word
 
 NOTE_START = "<!-- template-note:start -->"
 NOTE_END = "<!-- template-note:end -->"
-TEMPLATE_NOTE = """> [!NOTE]
-> This repository is a template. It is meant to be duplicated, so anyone can build their own shareable, self-updating catalog of Grok Bots. See [Make Your Own Catalog](#make-your-own-catalog)."""
 LICENSE_START = "<!-- license:start -->"
 LICENSE_END = "<!-- license:end -->"
 MAINTAIN_START = "<!-- maintain:start -->"
@@ -18,6 +16,8 @@ MAINTAIN_END = "<!-- maintain:end -->"
 GUIDE_START = "<!-- guide:start -->"
 GUIDE_END = "<!-- guide:end -->"
 PLACEHOLDER_REPO = "YOUR-USER/bot-catalog-for-grok-bot"
+# The README's generated prose, with {{key}} placeholders.
+PROSE = TEMPLATES / "readme"
 HEADER_START = "<!-- header:start -->"
 HEADER_END = "<!-- header:end -->"
 BOTS_START = "<!-- bots:start -->"
@@ -156,6 +156,9 @@ def render_table(catalog: Catalog, bots: list[Bot]) -> str:
 
 
 def replace_between(text: str, start_marker: str, end_marker: str, body: str) -> str:
+    # A catalog made before the template added a section has no markers for it yet, so they go at the end.
+    if start_marker not in text or end_marker not in text:
+        text = f"{text.rstrip()}\n\n{start_marker}\n{end_marker}\n"
     start, end = text.index(start_marker) + len(start_marker), text.index(end_marker)
     inner = f"\n{body}\n" if body else "\n"
     return f"{text[:start]}{inner}{text[end:]}"
@@ -163,101 +166,69 @@ def replace_between(text: str, start_marker: str, end_marker: str, body: str) ->
 
 def render_readme(catalog: Catalog, bots: list[Bot]) -> str:
     text = replace_between(README.read_text(), HEADER_START, HEADER_END, render_byline(catalog))
-    text = replace_between(text, NOTE_START, NOTE_END, TEMPLATE_NOTE if catalog.template else "")
+    text = replace_between(text, NOTE_START, NOTE_END, prose("template-note") if catalog.template else "")
     text = replace_between(text, GUIDE_START, GUIDE_END, render_guide(catalog))
     text = replace_between(text, MAINTAIN_START, MAINTAIN_END, render_maintain(catalog))
     text = replace_between(text, LICENSE_START, LICENSE_END, render_license(catalog))
     return replace_between(text, BOTS_START, BOTS_END, render_table(catalog, bots))
 
 
-def guide_prompts(catalog: Catalog):
-    repo = PLACEHOLDER_REPO if catalog.template else catalog.repo
-    values = {
-        "repo": repo,
-        "template_repo": catalog.template_repo,
-        "release_branch": catalog.release_branch,
-    }
-
-    def prompt(name: str) -> str:
-        text = substitute((PROMPTS / f"{name}.md").read_text().strip(), values)
-        return fence(text).replace("```markdown", "```text", 1)
-
-    return repo, prompt
+def prose(name: str, **values: str) -> str:
+    return substitute((PROSE / f"{name}.md").read_text().strip(), values)
 
 
-def fallback(catalog: Catalog, summary: str, name: str, anchor: str, where: str) -> list[str]:
+def fallback(catalog: Catalog, summary: str, name: str, anchor: str, where: str) -> str:
+    """The prompt that does a Catalog Manager step by hand, inline in the template and linked from every catalog."""
+    text = (PROMPTS / f"{name}.md").read_text().strip()
     # Only the template carries the prompt text, so every catalog uses the version its maintainer keeps current.
     if catalog.template:
-        _, prompt = guide_prompts(catalog)
-        return ["", f"<details><summary>{summary}</summary>", "", prompt(name), "", "</details>"]
+        values = {"repo": PLACEHOLDER_REPO, "template_repo": catalog.template_repo}
+        prompt = fence(substitute(text, values)).replace("```markdown", "```text", 1)
+        return f"<details><summary>{summary}</summary>\n\n{prompt}\n\n</details>"
     link = f"https://github.com/{catalog.template_repo}#{anchor}"
-    uses_repo = "{{repo}}" in (PROMPTS / f"{name}.md").read_text()
-    swap = f" Change `{PLACEHOLDER_REPO}` in it to `{catalog.repo}`." if uses_repo else ""
-    return ["", f"Rather not use the Catalog Manager? Paste [this prompt from the template]({link}) into {where}.{swap}"]
+    swap = f" Change `{PLACEHOLDER_REPO}` in it to `{catalog.repo}`." if "{{repo}}" in text else ""
+    return f"Rather not use the Catalog Manager? Paste [this prompt from the template]({link}) into {where}.{swap}"
 
 
-def create_steps(catalog: Catalog, manager_link: str) -> list[str]:
-    return [
-        f"Add the **Catalog Manager** from {manager_link}, then tell it *Set up my catalog*. It connects GitHub, creates your catalog from the template, protects its branches, and remembers which personal details must never be published. Nothing personal reaches GitHub without your yes in chat.",
-    ] + fallback(catalog, "Rather not add the Catalog Manager? Paste this into any Grok Bot instead.", "create-catalog", "1-create-your-catalog", "any Grok Bot")
+def create_steps(catalog: Catalog, manager_link: str) -> str:
+    summary = "Rather not add the Catalog Manager? Paste this into any Grok Bot instead."
+    return prose(
+        "create",
+        manager_link=manager_link,
+        fallback=fallback(catalog, summary, "create-catalog", "1-create-your-catalog", "any Grok Bot"),
+    )
 
 
-def manage_steps(catalog: Catalog, heading: str, first: int) -> list[str]:
-    return [
-        f"{heading} {first}. Share a Bot",
-        "",
-        "Tell your Catalog Manager *Share my &lt;bot name&gt;*. Say the same thing later to ship an improvement to a bot you already share.",
-        "",
-        "It reads the bot's full definition, strips anything personal, and shows you every file plus what it removed. After your yes, it does the rest. It opens a pull request for the bot. For a new bot, it also creates the public copy that carries the update check and adds its share link, so the bot appears in the README with its **Add Grok Bot** button. Merging the pull request releases the bot. People who already added the bot are offered the update within a day.",
-        *fallback(catalog, "Without the Catalog Manager, paste this into the bot you want to share.", "share-bot", "2-share-a-bot", "the bot you want to share"),
-        "",
-        "Every day, your Catalog Manager checks for new issues and pull requests and tells you about them. When someone else's pull request adds a new bot, it asks you to publish the bot and add its share link before merging.",
-        "",
-        f"{heading} {first + 1}. Keep Up With the Template",
-        "",
-        "The template's workflows, scripts, and update check improve over time, and a catalog doesn't get those changes on its own. Tell your Catalog Manager *Update my catalog from the template*. It also checks every week and asks before it changes anything.",
-        "",
-        "Prefer to work by hand, or curious how the pieces fit together? See [docs/make-your-own.md](docs/make-your-own.md).",
-    ]
+def manage_steps(catalog: Catalog, first: int) -> str:
+    summary = "Without the Catalog Manager, paste this into the bot you want to share."
+    return prose(
+        "manage",
+        first=str(first),
+        second=str(first + 1),
+        fallback=fallback(catalog, summary, "share-bot", "2-share-a-bot", "the bot you want to share"),
+    )
 
 
 def render_guide(catalog: Catalog) -> str:
     template = f"https://github.com/{catalog.template_repo}"
     if catalog.template:
-        lines = ["### 1. Create Your Catalog", ""] + create_steps(catalog, "the table above") + [
-            "",
-            "Once your catalog exists, its README has a **Maintain This Catalog** section with the next steps.",
-            "",
-        ] + manage_steps(catalog, "###", 2)
-    else:
-        lines = [
-            f"This catalog was made from the [Bot Catalog for Grok Bot template]({template}). To make your own, start from that template, not from this repository. A catalog made from the template gets its own setup workflow, its own bots, and its own update channel, and nothing in it depends on this one.",
-            "",
-        ] + create_steps(catalog, f"the [template's bot list]({template}#bots)")
-    return "\n".join(lines)
+        return prose("guide-template", create=create_steps(catalog, "the table above"), manage=manage_steps(catalog, 2))
+    return prose("guide-catalog", template_url=template, create=create_steps(catalog, f"the [template's bot list]({template}#bots)"))
 
 
 def render_license(catalog: Catalog) -> str:
-    gpl = "[GNU General Public License v3.0](LICENSE)"
     if catalog.bots_license == "GPL-3.0":
-        return (
-            f"The bots, scripts, and docs in this repo are licensed under the {gpl}. You can use, change, and share them. "
-            "If you share a changed version, it must stay under the GPL-3.0 and include its source."
-        )
+        return prose("license-gpl")
     name, condition = BOT_LICENSES[catalog.bots_license]
-    template = f"https://github.com/{catalog.template_repo}"
-    return (
-        f"The bots in `bots/` are licensed under the [{name}](LICENSE-BOTS). You can use, change, and share them. {condition}\n\n"
-        f"The scripts, workflows, and docs come from the [Bot Catalog for Grok Bot template]({template}) and stay under the {gpl}."
+    return prose(
+        "license-other",
+        license_name=name,
+        license_condition=condition,
+        template_url=f"https://github.com/{catalog.template_repo}",
     )
 
 
 def render_maintain(catalog: Catalog) -> str:
     if catalog.template:
         return ""
-    return "\n".join([
-        "## Maintain This Catalog",
-        "",
-        f"For whoever runs this catalog. The [Catalog Manager](https://github.com/{catalog.template_repo}#bots) does each step when you ask it.",
-        "",
-    ] + manage_steps(catalog, "###", 1))
+    return prose("maintain", template_url=f"https://github.com/{catalog.template_repo}", manage=manage_steps(catalog, 1))

@@ -47,15 +47,15 @@ class Bot:
 
 @dataclass(frozen=True)
 class Catalog:
+    # Template updates don't touch catalog.toml, so every key added after repo needs a default for older catalogs.
     repo: str
-    title: str
-    author: str
-    author_url: str
-    template: bool
-    template_repo: str
-    template_paths: list[str]
-    bots_license: str
-    release_branch: str
+    title: str = "Bot Catalog for Grok Bot"
+    author: str = ""
+    author_url: str = ""
+    template: bool = False
+    template_repo: str = "JaxonWright/bot-catalog-for-grok-bot-template"
+    template_paths: tuple[str, ...] = ()
+    bots_license: str = "GPL-3.0"
 
 
 class Invalid(Exception):

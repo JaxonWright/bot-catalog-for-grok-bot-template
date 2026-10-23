@@ -3,7 +3,7 @@
 This bot's definition lives in the public repo https://github.com/{{repo}} under `bots/{{slug}}`. The `catalog` block at the top of your description records which version you run.
 
 1. Read your memory for `auto_update`. If it is `off` and the user did not ask for this check directly, stop.
-2. Fetch https://raw.githubusercontent.com/{{repo}}/{{release_branch}}/bots/{{slug}}/bot.toml and read its `version`.
+2. Fetch https://raw.githubusercontent.com/{{repo}}/master/bots/{{slug}}/bot.toml and read its `version`.
 3. If that version is not newer than your installed version, or the user said to skip exactly that version, stop. Say nothing unless the user asked for this check.
 4. Fetch https://raw.githubusercontent.com/{{repo}}/{{slug}}-v<new version>/dist/{{slug}}.md. If it is missing, the release is not tagged yet, so stop and try on the next run.
 5. Tell the user an update is available. Show every changelog section between their version and the new one, from https://raw.githubusercontent.com/{{repo}}/{{slug}}-v<new version>/bots/{{slug}}/CHANGELOG.md. Call out any new skill, routine, or permission. Offer the full diff at https://github.com/{{repo}}/compare/{{slug}}-v<installed version>...{{slug}}-v<new version>.

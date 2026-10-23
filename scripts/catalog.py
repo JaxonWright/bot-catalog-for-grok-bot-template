@@ -139,8 +139,14 @@ def load_bot(directory: Path) -> Bot:
 
 def load_catalog() -> Catalog:
     # Older catalogs can carry keys the template has since dropped, like dev_branch.
-    known = {f.name for f in fields(Catalog)}
-    catalog = Catalog(**{k: v for k, v in read_toml(ROOT / "catalog.toml").items() if k in known})
+    types = {f.name: type(f.default) if f.name != "repo" else str for f in fields(Catalog)}
+    data = {k: v for k, v in read_toml(ROOT / "catalog.toml").items() if k in types}
+    if "repo" not in data:
+        raise Invalid("catalog.toml is missing repo")
+    for key, value in data.items():
+        if not isinstance(value, list if types[key] is tuple else types[key]):
+            raise Invalid(f"catalog.toml: {key} has the wrong type")
+    catalog = Catalog(**data | {"template_paths": tuple(data.get("template_paths", ()))})
     if catalog.bots_license not in BOT_LICENSES:
         raise Invalid(f"catalog.toml: bots_license must be one of {', '.join(BOT_LICENSES)}")
     return catalog
@@ -170,7 +176,6 @@ def fill(template: str, catalog: Catalog, bot: Bot) -> str:
     values = {
         "repo": catalog.repo,
         "template_repo": catalog.template_repo,
-        "release_branch": catalog.release_branch,
         "slug": bot.slug,
         "name": bot.name,
         "version": bot.version,
