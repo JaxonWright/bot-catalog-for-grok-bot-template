@@ -27,7 +27,7 @@ Installed bots fetch each update from its release tag, `<slug>-v<version>`.
 
 Anyone can propose changes to a bot. A change could quietly tell the bot to send data somewhere, or to act without asking.
 
-- **Handled.** Every change needs a maintainer to merge it. CI warns about every new `http` or `https` link in a bot's files. The Catalog Manager's triage calls out new permissions, routines, outside contacts, and links, and it treats everything written in issues and pull requests as data, never as instructions.
+- **Handled.** Every change needs a maintainer to merge it. CI warns about every new link in a bot's files, including ones written without `https://`. The Catalog Manager's triage calls out new permissions, routines, outside contacts, and links, and it treats everything written in issues and pull requests as data, never as instructions.
 - **You accept.** A reviewer can miss something. Read the changelog and diff before you accept an update.
 
 ### A swapped Add Grok Bot link
@@ -35,14 +35,14 @@ Anyone can propose changes to a bot. A change could quietly tell the bot to send
 A bot's `share_url` decides which bot the README's **Add Grok Bot** button installs. Pointing it at a look-alike bot would be easy to miss in review.
 
 - **Handled.** The Fork check workflow rejects a pull request from a fork that changes a `share_url` or anything outside `bots/`, including `catalog.toml`, whose `repo` decides where every bot looks for updates. It runs this repository's own copy of the check and only reads the fork's files, and `master` requires it, so the pull request can't switch it off. The Catalog Manager moves a fork's pull request into the repository only after its Fork check passes. A new bot can't merge until the catalog's owner publishes it and adds the link, and the Catalog Manager never asks anyone else for one. CI accepts only Grok Bot share links (`https://x.ai/bot/...`), so the button can't lead to another website. The README shows each bot's name and summary as plain text, and names must be one line with no links or markup, so neither can add a second button or link. The Catalog Manager's triage calls out any `share_url` change.
-- **You accept.** A maintainer can still change it, so the button is only as trustworthy as the catalog's maintainers. A fork's own workflows can also report a check named `fork-check`. Treat a failed Fork check as final, even next to a passing one.
+- **You accept.** A maintainer can still change it, so the button is only as trustworthy as the catalog's maintainers. A fork's own workflows could report a check named `fork-check`, so setup makes every outside contributor's workflow runs wait for a maintainer's approval. Never approve them. A fork's pull request is moved, never merged as it is, and the real Fork check runs without approval.
 
 ### Personal details published by mistake
 
 The repository is public. Anything pushed to it, including branches, commits, and pull request text, is public right away and stays in its history even after it is deleted.
 
-- **Handled.** The Catalog Manager and the share prompt draft everything in chat, list what they removed only there, and push nothing until the user approves. In the files under `bots/` and `catalog/`, CI rejects email addresses, US-style phone numbers, private IP addresses, API-key shapes, and anything in the maintainer's `PRIVATE_DENYLIST` secret. CI logs are public, so a `PRIVATE_DENYLIST` match says only that something matched, never which entry, file, or line. gitleaks scans every commit for secrets.
-- **You accept.** CI runs after a push, so it catches a leak but can't take it back. It doesn't check other files, pull request text, images, or commit details. Every commit carries its author's name and email, so commit with GitHub's `noreply` address and turn on "Keep my email addresses private" in GitHub's email settings. The approval in chat is the real safeguard. If something private is pushed, treat it as public. Rotate any key, and ask GitHub Support to purge cached views if needed.
+- **Handled.** The Catalog Manager and the share prompt draft everything in chat, list what they removed only there, and push nothing until the user approves. CI rejects email addresses, phone numbers, private IP addresses, API-key shapes, and anything in the maintainer's `PRIVATE_DENYLIST` secret, in the files under `bots/` and `catalog/` and in every line and commit message a pull request adds. Images can't carry EXIF or XMP metadata. CI logs are public, so a `PRIVATE_DENYLIST` match says only that something matched, never which entry, file, or line. gitleaks scans every commit for secrets.
+- **You accept.** CI runs after a push, so it catches a leak but can't take it back. It doesn't check pull request text, commit names, or non-US phone numbers written without a `+` country code, and a pattern can't catch everything personal. Every commit shows its author's email. If you don't want yours public, commit with your GitHub `noreply` address and turn on "Keep my email addresses private" in GitHub's email settings. The approval in chat is the real safeguard. If something private is pushed, treat it as public. Rotate any key, and ask GitHub Support to purge cached views if needed.
 
 ### Tricking the Catalog Manager
 
@@ -55,7 +55,7 @@ The Catalog Manager reads text written by strangers, such as issues, pull reques
 
 "Update my catalog from the template" copies the template's workflows and scripts into a catalog, where they run with write access.
 
-- **Handled.** The Catalog Manager shows every change to workflows and scripts in full and opens a pull request only after a yes. Nothing updates automatically.
+- **Handled.** The Catalog Manager shows every change to workflows and scripts in full and opens a pull request only after a yes. Nothing updates automatically. It deletes only the files the template's own file list says the template removed, never a file the catalog added.
 - **You accept.** Accepting a template update means trusting the template's maintainer for that change.
 
 ### Workflow permissions

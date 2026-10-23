@@ -1,0 +1,1 @@
+The bots, scripts, and docs in this repo are licensed under the [GNU General Public License v3.0](LICENSE). You can use, change, and share them. If you share a changed version, it must stay under the GPL-3.0 and include its source.

@@ -33,14 +33,20 @@ DARK_COLORS = {
 }
 # Only the README header uses these. Bots can't, because Grok Bot has no white, and its black turns white in
 # dark mode while the header's ink stays dark.
-ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": "#16161A"}
-# Bots have white eyes in light mode and black eyes in dark mode, as in Grok Bot. Every avatar SVG carries
-# this rule. The header is drawn once per theme, so it takes its colors from avatar_body's theme instead.
-DARK_MODE_STYLE = (
-    "\n@media (prefers-color-scheme: dark) {\n"
-    + "".join(f"  .{name} .skin {{ fill: {value}; color: {value}; }}\n" for name, value in DARK_COLORS.items())
-    + "  .eye { fill: #000000; }\n}\n"
-)
+# GitHub's light-theme text color, so the header's bubble letters and plain text match.
+INK = "#1F2328"
+ARTWORK_COLORS = COLORS | {"white": "#FFFFFF", "ink": INK}
+if DARK_COLORS.keys() != COLORS.keys():
+    raise RuntimeError("COLORS and DARK_COLORS must name the same colors")
+
+
+def dark_mode_style(color: str) -> str:
+    """Bots have white eyes in light mode and black eyes in dark mode, as in Grok Bot, and a darker body.
+
+    The header is drawn once per theme, so it takes its colors from avatar_body's theme instead.
+    """
+    value = DARK_COLORS[color]
+    return f"\n@media (prefers-color-scheme: dark) {{\n  .{color} .skin {{ fill: {value}; color: {value}; }}\n  .eye {{ fill: #000000; }}\n}}\n"
 
 
 @dataclass(frozen=True)
@@ -202,4 +208,31 @@ def avatar_body(shape: str, color: str, theme: str | None = None) -> str:
     return (
         f'<g class="body {color}">{outline}<g class="skin" fill="{fill}" color="{fill}">{parts}</g>'
         f'<g class="look">{eyes}</g></g>'
+    )
+
+ANIMATION_STYLE = """
+.body { transform-origin: 30px 30px; animation: breathe 3.2s ease-in-out var(--d, 0s) infinite; }
+.look { animation: look 8s ease-in-out var(--d, 0s) infinite; }
+.blink { transform-box: fill-box; transform-origin: center; animation: blink 8s var(--d, 0s) infinite; }
+@keyframes breathe { 50% { transform: scale(1.05); } }
+@keyframes look {
+  0%, 10% { transform: translate(0, 0); }
+  16%, 32% { transform: translate(-2.6px, -0.4px); }
+  38%, 48% { transform: translate(0, 0); }
+  54%, 70% { transform: translate(2.6px, 0.6px); }
+  76%, 86% { transform: translate(1.2px, -1.8px); }
+  92%, 100% { transform: translate(0, 0); }
+}
+@keyframes blink {
+  0%, 34%, 38%, 88%, 92%, 100% { transform: scaleY(1); }
+  36%, 90% { transform: scaleY(0.12); }
+}
+@media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
+"""
+
+
+def render_avatar(shape: str, color: str) -> str:
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="128" height="128">'
+        f"<style>{ANIMATION_STYLE}{dark_mode_style(color)}</style>{avatar_body(shape, color)}</svg>\n"
     )

@@ -11,7 +11,8 @@ permissions:
   actions: write
 
 concurrency:
-  group: build-${{ github.head_ref }}
+  # Keyed on the pull request, since a fork's branch can share a name with one here.
+  group: build-${{ github.event.pull_request.number }}
 
 jobs:
   build:
@@ -23,6 +24,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: false
+          # Bundles name the skills earlier releases had, so the build reads the release tags.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:

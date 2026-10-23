@@ -18,17 +18,7 @@
 @media (prefers-reduced-motion: reduce) { .body, .look, .blink { animation: none; } }
 
 @media (prefers-color-scheme: dark) {
-  .black .skin { fill: #FFFFFF; color: #FFFFFF; }
-  .brown .skin { fill: #855C36; color: #855C36; }
-  .red .skin { fill: #E02135; color: #E02135; }
-  .orange .skin { fill: #FF6700; color: #FF6700; }
-  .yellow .skin { fill: #FF9800; color: #FF9800; }
-  .green .skin { fill: #009957; color: #009957; }
-  .cyan .skin { fill: #00A592; color: #00A592; }
-  .blue .skin { fill: #0E74E0; color: #0E74E0; }
   .violet .skin { fill: #804EE0; color: #804EE0; }
-  .magenta .skin { fill: #E02A88; color: #E02A88; }
-  .gray .skin { fill: #777777; color: #777777; }
   .eye { fill: #000000; }
 }
 </style><g class="body violet"><g class="skin" fill="#A97EFE" color="#A97EFE"><path d="M53.00 30.00 L52.97 41.45 L52.90 43.95 L52.77 45.63 L52.59 46.93 L52.36 47.98 L52.07 48.87 L51.73 49.62 L51.31 50.27 L50.83 50.83 L50.27 51.31 L49.62 51.73 L48.87 52.07 L47.98 52.36 L46.93 52.59 L45.63 52.77 L43.95 52.90 L41.45 52.97 L30.00 53.00 L18.55 52.97 L16.05 52.90 L14.37 52.77 L13.07 52.59 L12.02 52.36 L11.13 52.07 L10.38 51.73 L9.73 51.31 L9.17 50.83 L8.69 50.27 L8.27 49.62 L7.93 48.87 L7.64 47.98 L7.41 46.93 L7.23 45.63 L7.10 43.95 L7.03 41.45 L7.00 30.00 L7.03 18.55 L7.10 16.05 L7.23 14.37 L7.41 13.07 L7.64 12.02 L7.93 11.13 L8.27 10.38 L8.69 9.73 L9.17 9.17 L9.73 8.69 L10.38 8.27 L11.13 7.93 L12.02 7.64 L13.07 7.41 L14.37 7.23 L16.05 7.10 L18.55 7.03 L30.00 7.00 L41.45 7.03 L43.95 7.10 L45.63 7.23 L46.93 7.41 L47.98 7.64 L48.87 7.93 L49.62 8.27 L50.27 8.69 L50.83 9.17 L51.31 9.73 L51.73 10.38 L52.07 11.13 L52.36 12.02 L52.59 13.07 L52.77 14.37 L52.90 16.05 L52.97 18.55 Z"/></g><g class="look"><g transform="rotate(7 23.75 29)"><rect class="blink eye" x="21.25" y="23.00" width="5" height="12" rx="2.5" fill="#FFFFFF"/></g><g transform="rotate(7 36.25 29)"><rect class="blink eye" x="33.75" y="23.00" width="5" height="12" rx="2.5" fill="#FFFFFF"/></g></g></g></svg>

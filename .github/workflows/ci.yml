@@ -9,14 +9,19 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # The branch a pull request or a run dispatched by Build merges into. Empty on a push to master.
+      BASE: ${{ github.event_name == 'pull_request' && github.base_ref || github.event_name == 'workflow_dispatch' && 'master' || '' }}
     steps:
+      # The pull request's own commits, not the merge commit GitHub makes to test it, which never lands in
+      # history. master requires branches to be up to date, so they match.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -29,13 +34,28 @@ jobs:
       - name: Check bots and privacy
         env:
           PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
-          BASE: ${{ github.event_name == 'pull_request' && github.base_ref || github.event_name == 'workflow_dispatch' && 'master' || '' }}
         run: |
           args=(--generated)
           if [ -n "$BASE" ]; then args+=(--base "origin/$BASE"); fi
           python scripts/catalog.py check "${args[@]}"
 
+      # The gitleaks command line itself, pinned and checksummed. Its GitHub Action needs a license for
+      # organization repositories, and fails on a new repository's first push.
       - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.24.3
+          GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
+          BEFORE: ${{ github.event.before }}
+        run: |
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o "$archive"
+          echo "$GITLEAKS_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          if [ -n "$BASE" ]; then
+            range="origin/$BASE..HEAD"
+          elif git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            range="$BEFORE..HEAD"
+          else
+            range="HEAD"
+          fi
+          "$RUNNER_TEMP/gitleaks" git --redact --no-banner --log-opts="$range" .
