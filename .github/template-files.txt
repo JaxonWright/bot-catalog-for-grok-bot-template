@@ -28,6 +28,8 @@ catalog/readme/manage.md
 catalog/readme/template-note.md
 catalog/updater-routine.toml
 catalog/updater-skill.md
+docs/diagrams/legend-dark.svg
+docs/diagrams/legend-light.svg
 docs/diagrams/placeholders-dark.svg
 docs/diagrams/placeholders-light.svg
 docs/diagrams/pull-requests-dark.svg

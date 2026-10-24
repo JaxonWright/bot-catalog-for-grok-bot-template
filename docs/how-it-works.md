@@ -2,7 +2,14 @@
 
 This page shows how a bot gets from the files in `bots/` into someone's Grok Bot, and how it stays up to date after that. To do these steps yourself, see [Make your own catalog by hand](make-your-own.md).
 
-In the diagrams, a gray box is a file in the repository and a teal box is a script or workflow. A blue box is a Grok Bot doing something, and a dashed orange box is a step that waits for your yes. To change a diagram, edit `scripts/diagrams.py` and run `python scripts/diagrams.py`.
+Every diagram uses this key. Teal arrows mark the main path.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="diagrams/legend-dark.svg">
+  <img src="diagrams/legend-light.svg" alt="Key: a gray box is a file in the repository, a teal box is a script or workflow, a thick teal box is what it produces, a blue box is a Grok Bot acting, and a dashed orange box waits for your yes.">
+</picture>
+
+To change a diagram, edit `scripts/diagrams.py` and run `python scripts/diagrams.py`.
 
 ## People install the built bundle, not the source files
 

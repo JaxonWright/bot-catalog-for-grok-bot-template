@@ -74,7 +74,7 @@ def svg(width, height, label, body, theme):
         f".tm,.tma{{font:600 12px {MONO};fill:{c['fg']}}}.tma{{fill:{c['auto']}}}"
         f".ts{{font-size:11.5px;fill:{c['muted']}}}.tl{{font-size:11.5px;font-style:italic;fill:{c['muted']}}}"
         f"rect{{stroke-width:1.5}}.file{{fill:{c['file']};stroke:{c['line']}}}"
-        f".auto,.out{{fill:{c['auto_bg']};stroke:{c['auto']}}}.out{{stroke-width:2.2}}"
+        f".auto,.out{{fill:{c['auto_bg']};stroke:{c['auto']}}}.out{{stroke-width:3.2}}"
         f".gate{{fill:{c['gate_bg']};stroke:{c['gate']};stroke-dasharray:5 3}}"
         f".bot{{fill:{c['bot_bg']};stroke:{c['bot']}}}.panel{{fill:none;stroke:{c['line']};stroke-width:1;stroke-dasharray:2 3}}"
         f".rule{{stroke:{c['line']}}}.edge{{fill:none;stroke:{c['muted']};stroke-width:1.4}}"
@@ -214,7 +214,20 @@ def sharing():
     ])
 
 
+def legend():
+    keys = [("file", "File in the repo"), ("auto", "Script or workflow"), ("out", "What it produces"),
+            ("bot", "A Grok Bot acting"), ("gate", "Waits for your yes")]
+    parts = []
+    for i, (kind, label) in enumerate(keys):
+        x = i * 176
+        parts.append(f'<rect class="{kind}" x="{x}" y="4" width="34" height="22" rx="4"/>')
+        parts.append(f'<text class="ts" x="{x + 44}" y="20">{esc(label)}</text>')
+    return 860, 30, "".join(parts)
+
+
 DIAGRAMS = {
+    "legend": (legend, "Key: a gray box is a file in the repository, a teal box is a script or workflow, a thick teal box "
+               "is what it produces, a blue box is a Grok Bot acting, and a dashed orange box waits for your yes."),
     "placeholders": (placeholders, "Files with placeholders go through catalog.py build into dist. "
                      "The installed bot reads only bot.toml, the dist bundle, and the changelog."),
     "pull-requests": (pull_requests, "Pull requests from this repo go through Build and forks through Fork check. "
