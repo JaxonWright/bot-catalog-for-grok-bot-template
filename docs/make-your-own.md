@@ -1,6 +1,6 @@
 # Make your own catalog by hand
 
-The [Catalog Manager](../README.md#bots) bot does all of this for you, and the README's [Make Your Own Catalog](../README.md#make-your-own-catalog) section has prompts for each step. This page is the same process for people who would rather click through it themselves, plus how the pieces fit together.
+The [Catalog Manager](../README.md#bots) bot does all of this for you, and the README's [Make Your Own Catalog](../README.md#make-your-own-catalog) section has prompts for each step. This page is the same process for people who would rather click through it themselves, plus how the pieces fit together. For diagrams of each process, see [How the catalog works](how-it-works.md).
 
 ## How it fits together
 
