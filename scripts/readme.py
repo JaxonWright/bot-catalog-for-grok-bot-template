@@ -45,7 +45,12 @@ WORDMARK_COLOR = {"light": "ink", "dark": "white"}
 
 
 def render_header(catalog: Catalog, theme: str) -> dict[Path, str]:
-    """The logo and the "<author>'s" line above it, drawn the same width so the line starts where the title does.
+    logo, byline, _, _ = draw_header(catalog, theme)
+    return {ROOT / "assets" / f"header-{theme}.svg": logo, ROOT / "assets" / f"byline-{theme}.svg": byline}
+
+
+def draw_header(catalog: Catalog, theme: str) -> tuple[str, str, int, int]:
+    """The logo and the "<author>'s" line above it, drawn the same width so the line starts where the title does, and the logo's size.
 
     The logo is the avatar group beside the title, with each word before " for " stacked in bubble letters and the rest under them.
     """
@@ -102,7 +107,40 @@ def render_header(catalog: Catalog, theme: str) -> dict[Path, str]:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} 30" width="{width}" height="30" role="img" aria-label="{owner}">'
         f'<text x="{text_x + 2}" y="23" fill="{ink}" font-family="{SANS}" font-size="22" font-weight="600">{owner}</text></svg>\n'
     )
-    return {ROOT / "assets" / f"header-{theme}.svg": logo, ROOT / "assets" / f"byline-{theme}.svg": byline}
+    return logo, byline, width, height
+
+
+SOCIAL_PREVIEW = ROOT / "assets" / "social-preview.svg"
+SOCIAL_WIDTH, SOCIAL_HEIGHT = 1280, 640
+SOCIAL_BACKGROUND = "#0D1117"
+SOCIAL_MUTED = "#9198A1"
+TAGLINE = "Shareable Grok Bots that keep themselves up to date."
+BYLINE_HEIGHT = 30
+
+
+def render_social_preview(catalog: Catalog) -> dict[Path, str]:
+    """The card link previews show: the dark header and its byline, scaled up and centered over the tagline.
+
+    GitHub takes only a PNG uploaded by hand, so Set up catalog draws this to social-preview.png beside it.
+    The template has no author yet, so its card leaves out the byline rather than show "<name>'s".
+    """
+    logo, byline, width, height = draw_header(catalog, "dark")
+    byline_height = BYLINE_HEIGHT if catalog.author else 0
+    scale = min(980 / width, 400 / (height + byline_height))
+    tagline_gap, tagline_size = 64, 34
+    block = (height + byline_height) * scale + tagline_gap
+    top = (SOCIAL_HEIGHT - block) / 2
+    art = f'<g transform="translate({(SOCIAL_WIDTH - width * scale) / 2:.1f} {top:.1f}) scale({scale:.4f})">'
+    if catalog.author:
+        art += byline
+    art += f'<g transform="translate(0 {byline_height})">{logo}</g></g>'
+    card = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {SOCIAL_WIDTH} {SOCIAL_HEIGHT}" width="{SOCIAL_WIDTH}" height="{SOCIAL_HEIGHT}" '
+        f'role="img" aria-label="{html.escape(catalog.title)}"><rect width="{SOCIAL_WIDTH}" height="{SOCIAL_HEIGHT}" fill="{SOCIAL_BACKGROUND}"/>{art}'
+        f'<text x="{SOCIAL_WIDTH / 2:g}" y="{top + block:.0f}" text-anchor="middle" fill="{SOCIAL_MUTED}" font-family="{SANS}" '
+        f'font-size="{tagline_size}" font-weight="500">{TAGLINE}</text></svg>\n'
+    )
+    return {SOCIAL_PREVIEW: card}
 
 
 def render_byline(catalog: Catalog) -> str:

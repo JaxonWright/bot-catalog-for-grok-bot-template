@@ -56,6 +56,7 @@ jobs:
           fi
           python scripts/catalog.py configure --repo "$GITHUB_REPOSITORY" --author "$author" --author-url "$author_url" \
             --template false --bots-license "$BOTS_LICENSE"
+          scripts/social-preview.sh
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -63,3 +64,14 @@ jobs:
             git commit -m "Set up the catalog for $GITHUB_REPOSITORY"
             git push origin HEAD:master
           fi
+
+      # GitHub has no API for a repository's social preview, so its owner uploads the card by hand.
+      - name: Point to the social preview
+        run: |
+          {
+            echo "### One more step"
+            echo
+            echo "Download [the link preview card](https://github.com/$GITHUB_REPOSITORY/raw/master/assets/social-preview.png),"
+            echo "then upload it under [Settings](https://github.com/$GITHUB_REPOSITORY/settings) > General > Social preview > Edit."
+            echo "Links to your catalog then show your card instead of your GitHub avatar."
+          } >> "$GITHUB_STEP_SUMMARY"

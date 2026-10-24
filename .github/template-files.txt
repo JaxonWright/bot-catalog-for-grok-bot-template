@@ -54,5 +54,6 @@ scripts/install-hooks.sh
 scripts/model.py
 scripts/protect-repo.sh
 scripts/readme.py
+scripts/social-preview.sh
 scripts/test_catalog.py
 scripts/wordmark.py
