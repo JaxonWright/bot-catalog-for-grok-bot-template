@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- The Catalog Manager keeps its version in its "Check for bot updates" skill instead of its description. It can tell you which version it runs even if its description is replaced, as happened to a copy added from its share link.
+
 ## 1.1.4
 
 - If the daily update check can't find the Catalog Manager in its catalog, it now tells you, and says whether the whole catalog repository is gone. Then it asks whether to try again or turn automatic checks off.
