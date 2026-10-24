@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- If the daily update check can't find the Catalog Manager in its catalog, it now tells you, and says whether the whole catalog repository is gone. Then it asks whether to try again or turn automatic checks off.
+
 ## 1.1.3
 
 - Only you add bots to your catalog. Other people's pull requests can suggest changes to your bots but can't add new ones, so the Catalog Manager points them to a "Bot idea" issue instead.
