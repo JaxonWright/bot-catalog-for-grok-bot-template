@@ -28,6 +28,7 @@ catalog/readme/manage.md
 catalog/readme/template-note.md
 catalog/updater-routine.toml
 catalog/updater-skill.md
+docs/how-it-works.md
 docs/make-your-own.md
 docs/prompts/create-catalog.md
 docs/prompts/share-bot.md

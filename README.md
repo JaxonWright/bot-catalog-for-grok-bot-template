@@ -97,7 +97,7 @@ Every day, your Catalog Manager checks for new issues and pull requests and tell
 
 The template's workflows, scripts, and update check improve over time, and a catalog doesn't get those changes on its own. Tell your Catalog Manager *Update my catalog from the template*. It also checks every week and asks before it changes anything.
 
-Prefer to work by hand, or curious how the pieces fit together? See [docs/make-your-own.md](docs/make-your-own.md).
+Prefer to work by hand? See [docs/make-your-own.md](docs/make-your-own.md). For diagrams of how the pieces fit together, see [docs/how-it-works.md](docs/how-it-works.md).
 <!-- guide:end -->
 
 <!-- maintain:start -->
