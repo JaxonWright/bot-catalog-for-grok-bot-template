@@ -4,17 +4,16 @@ name: Fork check
 # This job runs this repository's copy of scripts/catalog.py instead and only reads the fork's files.
 # It gets no PRIVATE_DENYLIST, so a fork can't probe the secret by guessing entries.
 # master requires this check. On a pull request from this repository it is skipped, which counts as passing.
+# Build reports this check itself on the commit it adds, since GitHub holds runs that its push starts.
 on:
   pull_request_target:
-  # The Build workflow dispatches this after it commits, so the new commit gets its skipped, passing check too.
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   fork-check:
-    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out this repository's scripts
