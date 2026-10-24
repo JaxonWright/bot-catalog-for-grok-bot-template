@@ -28,6 +28,18 @@ catalog/readme/manage.md
 catalog/readme/template-note.md
 catalog/updater-routine.toml
 catalog/updater-skill.md
+docs/diagrams/placeholders-dark.svg
+docs/diagrams/placeholders-light.svg
+docs/diagrams/pull-requests-dark.svg
+docs/diagrams/pull-requests-light.svg
+docs/diagrams/setup-dark.svg
+docs/diagrams/setup-light.svg
+docs/diagrams/sharing-dark.svg
+docs/diagrams/sharing-light.svg
+docs/diagrams/template-updates-dark.svg
+docs/diagrams/template-updates-light.svg
+docs/diagrams/update-check-dark.svg
+docs/diagrams/update-check-light.svg
 docs/how-it-works.md
 docs/make-your-own.md
 docs/prompts/create-catalog.md
@@ -35,6 +47,7 @@ docs/prompts/share-bot.md
 scripts/avatars.py
 scripts/catalog.py
 scripts/check.sh
+scripts/diagrams.py
 scripts/install-hooks.sh
 scripts/model.py
 scripts/protect-repo.sh
