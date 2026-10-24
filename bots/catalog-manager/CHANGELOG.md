@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6
+
+- When it publishes a bot, the Catalog Manager sets the share link's description to the bot's one-line summary. Before, the share link could show the bot's full instructions.
+
 ## 1.1.5
 
 - The Catalog Manager keeps its version in its "Check for bot updates" skill instead of its description. It can tell you which version it runs even if its description is replaced, as happened to a copy added from its share link.

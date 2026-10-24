@@ -27,7 +27,7 @@ To change the byline or title later, run **Set up catalog** again with new value
 ## 3. Publish and release
 
 1. Create a new Grok Bot and paste in: "Fetch `https://raw.githubusercontent.com/<you>/<catalog>/<branch>/dist/<slug>.md` and set yourself up exactly as its 'How to apply' section says." Set its name and avatar to match `bot.toml`.
-2. In that bot, choose **Share > Create template > Public link** and copy the link.
+2. In that bot, choose **Share > Create template > Public link**. Set the template's description to the `summary` in `bot.toml`, since that is what people see on the share link. Then copy the link.
 3. Put the link in `share_url` in `bot.toml` on the same branch. If you change the bot's files after this, apply the new bundle to the published bot again and choose **Share > Update template**.
 4. Merge the pull request once the check passes. That releases the bot.
 
