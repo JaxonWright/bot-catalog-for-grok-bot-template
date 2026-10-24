@@ -1,6 +1,6 @@
 name: Build
 
-# Regenerates the README table, avatars, and install bundles on each pull request branch in this repository,
+# Regenerates the README table, avatars, social preview, and install bundles on each pull request branch in this repository,
 # so a pull request carries its generated files when it merges. A fork's branch can't be pushed to.
 on:
   pull_request:
@@ -34,8 +34,13 @@ jobs:
 
       - name: Regenerate the README, avatars, and install bundles
         id: build
+        env:
+          BASE: ${{ github.base_ref }}
         run: |
           python scripts/catalog.py build
+          if [ ! -f assets/social-preview.png ] || ! git diff --quiet "origin/$BASE" -- assets/social-preview.svg; then
+            scripts/social-preview.sh
+          fi
           if [ -z "$(git status --porcelain)" ]; then
             echo "Generated files are already up to date."
             exit 0

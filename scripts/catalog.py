@@ -17,7 +17,7 @@ from avatars import COLORS, SHAPES, render_avatar
 from model import (
     AVATAR_FILE, BOT_LICENSES, BOTS, DIST, README, ROOT, TEMPLATE_FILES, TEMPLATES, Bot, Catalog, Invalid, Routine, fence, substitute,
 )
-from readme import HEADER_INK, render_header, render_readme
+from readme import HEADER_INK, render_header, render_readme, render_social_preview
 
 SLUG = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
@@ -282,6 +282,7 @@ def expected_outputs(catalog: Catalog, bots: list[Bot]) -> dict[Path, str]:
     outputs = {README: render_readme(catalog, bots)}
     for theme in HEADER_INK:
         outputs |= render_header(catalog, theme)
+    outputs |= render_social_preview(catalog)
     outputs |= {DIST / f"{bot.slug}.md": render_bundle(catalog, bot) for bot in bots}
     outputs |= {BOTS / bot.slug / AVATAR_FILE: render_avatar(*bot.avatar) for bot in bots if bot.avatar}
     if catalog.template:

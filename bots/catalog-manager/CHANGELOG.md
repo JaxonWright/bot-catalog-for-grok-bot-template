@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- Setting up a catalog now ends with its link preview. The Catalog Manager uploads the card with your catalog's logo and your name as the repository's social preview, or gives you the image and the clicks when it can't. It does the same after a template update that changes the card.
+
 ## 1.1.6
 
 - When it publishes a bot, the Catalog Manager sets the share link's description to the bot's one-line summary. Before, the share link could show the bot's full instructions.

@@ -229,6 +229,16 @@ class CatalogTest(unittest.TestCase):
         self.assertIn("avatar has the wrong type", output)
         self.assertNotIn("Traceback", output)
 
+    def test_the_social_preview_credits_the_author_once_set(self):
+        self.set_toml("author", '""')
+        self.build_and_commit("no author")
+        self.assertNotIn("&lt;name&gt;", (self.root / "assets/social-preview.svg").read_text())
+        code, output = self.run_script("configure", "--author", "Ada", "--title", "Bot Shelf for Grok Bot")
+        self.assertEqual(code, 0, output)
+        card = (self.root / "assets/social-preview.svg").read_text()
+        self.assertIn("Ada\u2019s", card)
+        self.assertIn('aria-label="Bot Shelf for Grok Bot"', card)
+
     def test_the_template_lists_the_files_it_owns(self):
         self.set_toml("template", "true")
         self.build_and_commit("as the template")
