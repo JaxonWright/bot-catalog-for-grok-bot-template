@@ -7,8 +7,9 @@ Use this when the user asks to bring their catalog up to date with the template,
 3. Summarize the differences for the user in plain words, and show the full changes to anything under `.github/workflows/` or `scripts/`, because those run with write access to their repository.
 4. On yes, read the catalog's `.github/template-files.txt`, the list of files the template owned at the last update. Create a branch off `master`, copy those paths from the template exactly, and delete each file on the old list that the template's new list drops. Never delete any other file, because a file the template never listed is the user's own. If the catalog has no `.github/template-files.txt` yet, delete only `.github/rulesets/protect-dev.json`, if it exists. Open a pull request into `master` titled "Update from the template".
 5. If the update changes a file in `.github/rulesets/`, tell the user that the matching ruleset must be replaced after the merge. In the browser, that is Settings, then Rules, then Rulesets, then delete the old ruleset of that name, then "New ruleset", then "Import a ruleset" with the new file.
-6. If the update changes the install bundles, for example through `catalog/` or `scripts/catalog.py`, the check asks for a version bump on each released bot. Bump each one by a patch version and add a changelog section that says "Updated the catalog's automatic update check." Add more detail only if the template's change gives users something new.
-7. When the check passes, ask the user whether to merge. Merging releases every bot whose version changed.
+6. If the pull request adds or changes `assets/social-preview.png`, which the Build workflow draws when the template changes the card, set it as the repository's social preview after the merge, the same way as when you set up a catalog.
+7. If the update changes the install bundles, for example through `catalog/` or `scripts/catalog.py`, the check asks for a version bump on each released bot. Bump each one by a patch version and add a changelog section that says "Updated the catalog's automatic update check." Add more detail only if the template's change gives users something new.
+8. When the check passes, ask the user whether to merge. Merging releases every bot whose version changed.
 
 If `catalog_repo` still has a `dev` branch, retire it before step 4, and ask before each step:
 
