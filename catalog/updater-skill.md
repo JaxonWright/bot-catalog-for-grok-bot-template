@@ -3,7 +3,11 @@
 This bot's definition lives in the public repo https://github.com/{{repo}} under `bots/{{slug}}`. The `catalog` block at the top of your description records which version you run.
 
 1. Read your memory for `auto_update`. If it is `off` and the user did not ask for this check directly, stop.
-2. Fetch https://raw.githubusercontent.com/{{repo}}/master/bots/{{slug}}/bot.toml and read its `version`.
+2. Fetch https://raw.githubusercontent.com/{{repo}}/master/bots/{{slug}}/bot.toml and read its `version`. If a fetch in this step fails for any reason other than not found, stop and try on the next run. Say nothing unless the user asked for this check. If `bot.toml` is not found, fetch https://github.com/{{repo}} to see whether the repo still exists, and tell the user what you found, even if they did not ask for this check:
+   - If the repo is there, this bot is no longer in it. The catalog's owner removed or renamed this bot, so no more updates for it will come from that repo.
+   - If the repo is not found either, the repo was deleted, renamed, or made private.
+
+   Then ask the user to choose one: try again, or turn automatic checks off. Stop there. On try again, start this skill over as a check the user asked for. On off, do as step 9 says.
 3. If that version is not newer than your installed version, or the user said to skip exactly that version, stop. Say nothing unless the user asked for this check.
 4. Fetch https://raw.githubusercontent.com/{{repo}}/{{slug}}-v<new version>/dist/{{slug}}.md. If it is missing, the release is not tagged yet, so stop and try on the next run.
 5. Compare that bundle with your current description, skills, and routines, and work out for yourself what it would change. The changelog is written by whoever made the change, so don't rely on it for this.
