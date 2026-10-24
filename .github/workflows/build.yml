@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
   actions: write
 
 concurrency:
@@ -19,7 +20,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      # No saved credentials while the build reads the branch's files. The push step adds them.
+      # No saved credentials while the build and check read the branch's files. The push step adds them.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.head_ref }}
@@ -32,13 +33,9 @@ jobs:
           python-version: "3.12"
 
       - name: Regenerate the README, avatars, and install bundles
-        run: python scripts/catalog.py build
-
-      - name: Commit and re-check
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.head_ref }}
+        id: build
         run: |
+          python scripts/catalog.py build
           if [ -z "$(git status --porcelain)" ]; then
             echo "Generated files are already up to date."
             exit 0
@@ -47,7 +44,43 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Regenerate catalog files"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      # GitHub holds the runs a push with this workflow's token starts until someone approves them, so the new
+      # commit gets its checks here instead.
+      - name: Check the new commit
+        id: check
+        if: steps.build.outputs.committed == 'true'
+        continue-on-error: true
+        env:
+          PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
+          BASE: ${{ github.base_ref }}
+          RANGE: origin/${{ github.base_ref }}..HEAD
+        run: scripts/check.sh
+
+      - name: Push the new commit and report its checks
+        if: steps.build.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref }}
+          CHECK: ${{ steps.check.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
           gh auth setup-git
           git push origin "HEAD:$BRANCH"
-          gh workflow run ci.yml --ref "$BRANCH"
-          gh workflow run fork-check.yml --ref "$BRANCH"
+          sha=$(git rev-parse HEAD)
+          if [ "$CHECK" = success ]; then state=success; else state=failure; fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f context=check -f state="$state" -f target_url="$RUN_URL" \
+            -f description="Checked by Build after it regenerated the catalog files"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f context=fork-check -f state=success -f target_url="$RUN_URL" \
+            -f description="Not from a fork"
+          # The held runs would only repeat these checks, and leave an approval button on the pull request.
+          for _ in $(seq 12); do
+            sleep 5
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$sha&status=action_required" --jq '.workflow_runs[].id' |
+              while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" && echo "Deleted held run $id"; done
+          done
+          if [ "$state" = failure ]; then
+            echo "::error::The new commit failed its checks. See the step above."
+            exit 1
+          fi

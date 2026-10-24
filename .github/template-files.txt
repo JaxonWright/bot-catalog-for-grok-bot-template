@@ -33,6 +33,7 @@ docs/prompts/create-catalog.md
 docs/prompts/share-bot.md
 scripts/avatars.py
 scripts/catalog.py
+scripts/check.sh
 scripts/install-hooks.sh
 scripts/model.py
 scripts/protect-repo.sh
