@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- Test entry, do not merge.
+
 ## 1.1.6
 
 - When it publishes a bot, the Catalog Manager sets the share link's description to the bot's one-line summary. Before, the share link could show the bot's full instructions.
