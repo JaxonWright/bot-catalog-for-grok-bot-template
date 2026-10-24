@@ -112,19 +112,19 @@ def draw_header(catalog: Catalog, theme: str) -> tuple[str, str, int, int]:
 
 SOCIAL_PREVIEW = ROOT / "assets" / "social-preview.svg"
 SOCIAL_WIDTH, SOCIAL_HEIGHT = 1280, 640
-SOCIAL_BACKGROUND = "#0D1117"
-SOCIAL_MUTED = "#9198A1"
+SOCIAL_BACKGROUND = "#FFFFFF"
+SOCIAL_MUTED = "#59636E"
 TAGLINE = "Shareable Grok Bots that keep themselves up to date."
 BYLINE_HEIGHT = 30
 
 
 def render_social_preview(catalog: Catalog) -> dict[Path, str]:
-    """The card link previews show: the dark header and its byline, scaled up and centered over the tagline.
+    """The card link previews show: the light header and its byline, scaled up and centered over the tagline.
 
     GitHub takes only a PNG uploaded by hand, so Set up catalog draws this to social-preview.png beside it.
     The template has no author yet, so its card leaves out the byline rather than show "<name>'s".
     """
-    logo, byline, width, height = draw_header(catalog, "dark")
+    logo, byline, width, height = draw_header(catalog, "light")
     byline_height = BYLINE_HEIGHT if catalog.author else 0
     scale = min(980 / width, 400 / (height + byline_height))
     tagline_gap, tagline_size = 64, 34
