@@ -1,6 +1,7 @@
-"""Runs catalog.py against throwaway copies of this catalog. Run with: python -m unittest discover -s scripts"""
+"""Runs catalog.py against throwaway catalogs built from this repo's shared files and a fixture bot, so it passes in any catalog. Run with: python -m unittest discover -s scripts"""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -29,9 +30,12 @@ class CatalogTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
-        for name in ("bots", "catalog", "docs", "assets", "dist", "catalog.toml", "README.md", "LICENSE"):
+        for name in ("catalog", "docs", "assets", "catalog.toml", "README.md", "LICENSE", "LICENSE-BOTS"):
             source = SOURCE / name
-            (shutil.copytree if source.is_dir() else shutil.copy)(source, self.root / name)
+            if source.exists():
+                (shutil.copytree if source.is_dir() else shutil.copy)(source, self.root / name)
+        # Every catalog has different bots, so the tests bring their own instead of using this repo's.
+        self.add_fixture_bot()
         self.git("init", "-q", "-b", "master")
         self.commit("base")
         self.run_script("build")
@@ -65,6 +69,22 @@ class CatalogTest(unittest.TestCase):
         text = file.read_text()
         self.assertIn(old, text)
         file.write_text(text.replace(old, new, 1))
+
+    def add_fixture_bot(self):
+        bot = self.root / "bots/catalog-manager"
+        (bot / "skills").mkdir(parents=True)
+        (bot / "routines").mkdir()
+        (bot / "bot.toml").write_text('name = "Catalog Manager"\nversion = "1.0.0"\nsummary = "A fixture bot for the tests."\navatar = { shape = "squircle", color = "violet" }\nshare_url = "https://x.ai/bot/fixture"\n')
+        (bot / "instructions.md").write_text("Run the catalog for the user.\n")
+        (bot / "skills/triage.md").write_text("# Triage\n\nSort new issues.\n")
+        (bot / "routines/check-the-catalog.toml").write_text('name = "Check the catalog"\nschedule = "Every day at 09:00 in the user\'s time zone"\ninstructions = """\nLook for new issues.\n"""\n')
+        (bot / "CHANGELOG.md").write_text("# Changelog\n\n## 1.0.0\n\n- First release.\n")
+
+    def set_toml(self, key, value):
+        toml = self.root / "catalog.toml"
+        text, count = re.subn(rf"^{key} = .*$", lambda _: f"{key} = {value}", toml.read_text(), count=1, flags=re.M)
+        self.assertEqual(count, 1, key)
+        toml.write_text(text)
 
     def add_bot(self, slug):
         bot = self.root / "bots" / slug
@@ -196,7 +216,7 @@ class CatalogTest(unittest.TestCase):
         self.assertEqual(code, 0, output)
 
     def test_a_catalog_toml_value_of_the_wrong_type_fails_clearly(self):
-        self.edit("catalog.toml", "template = true", 'template = "yes"')
+        self.set_toml("template", '"yes"')
         code, output = self.run_script("build")
         self.assertEqual(code, 1, output)
         self.assertIn("catalog.toml: template has the wrong type", output)
@@ -210,6 +230,8 @@ class CatalogTest(unittest.TestCase):
         self.assertNotIn("Traceback", output)
 
     def test_the_template_lists_the_files_it_owns(self):
+        self.set_toml("template", "true")
+        self.build_and_commit("as the template")
         listed = (self.root / ".github/template-files.txt").read_text().splitlines()
         self.assertIn("catalog/updater-skill.md", listed)
         self.git("rm", "-q", "docs/make-your-own.md")
@@ -355,7 +377,7 @@ class CatalogTest(unittest.TestCase):
         self.assertIn("its name is too close to bots/catalog-manager's", output)
 
     def test_author_url_must_be_a_web_link(self):
-        self.edit("catalog.toml", 'author_url = ""', 'author_url = "javascript:alert(1)"')
+        self.set_toml("author_url", '"javascript:alert(1)"')
         code, output = self.run_script("build")
         self.assertEqual(code, 1, output)
         self.assertIn("author_url must be empty or start with https://", output)
