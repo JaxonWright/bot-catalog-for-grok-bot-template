@@ -10,6 +10,8 @@ permissions:
   contents: write
   statuses: write
   actions: write
+  # Only for the share_url comment.
+  pull-requests: write
 
 concurrency:
   # Keyed on the pull request, since a fork's branch can share a name with one here.
@@ -61,7 +63,9 @@ jobs:
           PRIVATE_DENYLIST: ${{ secrets.PRIVATE_DENYLIST }}
           BASE: ${{ github.base_ref }}
           RANGE: origin/${{ github.base_ref }}..HEAD
-        run: scripts/check.sh
+        run: |
+          set -o pipefail
+          scripts/check.sh 2>&1 | tee "$RUNNER_TEMP/check.log"
 
       - name: Push the new commit and report its checks
         if: steps.build.outputs.committed == 'true'
@@ -89,3 +93,13 @@ jobs:
             echo "::error::The new commit failed its checks. See the step above."
             exit 1
           fi
+
+      # After the push, so the comment describes the pull request's new head.
+      - name: Comment on share_url problems
+        if: always() && steps.build.outputs.committed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.head_ref }}
+        run: python scripts/catalog.py share-url-comment "$RUNNER_TEMP/check.log" --sha "$(git rev-parse HEAD)"

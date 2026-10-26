@@ -417,5 +417,29 @@ class CatalogTest(unittest.TestCase):
         self.assertLess(text.index("<!-- improve:end -->"), text.index("## Make Your Own Catalog"))
 
 
+
+class ShareUrlCommentTest(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(SCRIPT.parent))
+        import catalog
+        self.catalog = catalog
+
+    def test_finds_missing_and_malformed_share_urls(self):
+        log = "\n".join([
+            "error: bots/duke is a new bot, so it needs share_url before it merges. The catalog's owner publishes it",
+            "error: bots/beet/bot.toml: share_url must be empty or a Grok Bot share link like https://x.ai/bot/abc123",
+            "error: bots/beet/instructions.md: something else",
+            "warning: bots/larry/bot.toml: share_url link",
+        ])
+        self.assertEqual([slug for slug, _ in self.catalog.share_url_issues(log)], ["duke", "beet"])
+
+    def test_comment_names_each_bot_and_links_the_docs(self):
+        body = self.catalog.share_url_comment([("duke", "bots/duke needs share_url")], "owner/catalog", "add-duke")
+        self.assertTrue(body.startswith(self.catalog.SHARE_URL_MARKER))
+        self.assertIn("**duke**", body)
+        self.assertIn("https://github.com/owner/catalog/blob/master/docs/make-your-own.md", body)
+        self.assertIn("resolved", self.catalog.share_url_comment([], "owner/catalog", "add-duke"))
+
+
 if __name__ == "__main__":
     unittest.main()

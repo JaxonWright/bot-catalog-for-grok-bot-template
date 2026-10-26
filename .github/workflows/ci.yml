@@ -11,6 +11,10 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Only for the share_url comment on pull requests from this repository.
+      pull-requests: write
     steps:
       # The pull request's own commits, not the merge commit GitHub makes to test it, which never lands in
       # history. master requires branches to be up to date, so they match.
@@ -29,6 +33,7 @@ jobs:
           BASE: ${{ github.base_ref }}
           BEFORE: ${{ github.event.before }}
         run: |
+          set -o pipefail
           if [ -n "$BASE" ]; then
             export RANGE="origin/$BASE..HEAD"
           elif git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
@@ -36,4 +41,15 @@ jobs:
           else
             export RANGE=HEAD
           fi
-          scripts/check.sh
+          scripts/check.sh 2>&1 | tee "$RUNNER_TEMP/check.log"
+
+      # Build checks the head instead when it adds a commit, and this skips itself once that commit is the head.
+      - name: Comment on share_url problems
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.head_ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/catalog.py share-url-comment "$RUNNER_TEMP/check.log" --sha "$SHA"

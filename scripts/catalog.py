@@ -613,6 +613,73 @@ def cmd_notes(args) -> int:
     return 0
 
 
+SHARE_URL_MARKER = "<!-- catalog:share-url -->"
+
+
+def share_url_issues(log: str) -> list[tuple[str, str]]:
+    """The (slug, problem) pairs among a check's error lines that are about share_url."""
+    issues = []
+    for line in log.splitlines():
+        match = re.match(r"\s*error: (bots/([^/\s]+)\S*.*)", line)
+        if match and "share_url" in match.group(1) and (match.group(2), match.group(1)) not in issues:
+            issues.append((match.group(2), match.group(1)))
+    return issues
+
+
+def share_url_comment(issues: list[tuple[str, str]], repo: str, branch: str) -> str:
+    if not issues:
+        return f"{SHARE_URL_MARKER}\n**share_url: resolved.** Every bot in this pull request has a valid share link now."
+    docs = f"https://github.com/{repo}/blob/master/docs/make-your-own.md"
+    lines = [SHARE_URL_MARKER, "**The check failed because of share_url.**", ""]
+    lines += [f"- **{slug}**: {problem}" for slug, problem in issues]
+    lines += [
+        "",
+        "To fix it, publish each bot above from this branch: in Grok Bot, open the bot, then choose **Share**, then "
+        "**Create template**, then **Public link**. Then send the link to your Catalog Manager bot, and it adds it "
+        f"to `share_url` on `{branch}`.",
+        "",
+        f"Without a Catalog Manager, put the link in `share_url` in `bots/<slug>/bot.toml` on this branch and push. "
+        f"More in [Make your own]({docs}). This comment updates when the check passes.",
+    ]
+    return "\n".join(lines)
+
+
+def cmd_share_url_comment(args) -> int:
+    """Reports share_url problems from a check's log on its pull request. Never fails, so it can't change the check."""
+    try:
+        log = Path(args.log)
+        issues = share_url_issues(log.read_text(errors="replace") if log.exists() else "")
+        repo, pr = os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("PR_NUMBER", "")
+        body = share_url_comment(issues, repo, os.environ.get("BRANCH", "this branch"))
+        for slug, problem in issues:
+            print(f"::error file={annotation(f'bots/{slug}/bot.toml', property=True)}::{annotation(problem)}")
+        if issues and os.environ.get("GITHUB_STEP_SUMMARY"):
+            with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+                summary.write(body.replace(SHARE_URL_MARKER, "").strip() + "\n")
+        if not (repo and pr):
+            print(body)
+            return 0
+        # An older commit's check can't overwrite the comment for the pull request's newer head.
+        head = subprocess.run(["gh", "api", f"repos/{repo}/pulls/{pr}", "--jq", ".head.sha"], capture_output=True, text=True)
+        if args.sha and head.returncode == 0 and head.stdout.strip() not in ("", args.sha):
+            print("The pull request has a newer commit, so its own check updates the comment.")
+            return 0
+        found = subprocess.run(
+            ["gh", "api", "--paginate", f"repos/{repo}/issues/{pr}/comments",
+             "--jq", f'.[] | select(.body | contains("{SHARE_URL_MARKER}")) | .id'],
+            capture_output=True, text=True, check=True,
+        ).stdout.split()
+        if found:
+            subprocess.run(["gh", "api", "-X", "PATCH", f"repos/{repo}/issues/comments/{found[0]}", "-f", f"body={body}"],
+                           check=True, stdout=subprocess.DEVNULL)
+        elif issues:
+            subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"],
+                           check=True, stdout=subprocess.DEVNULL)
+    except Exception as error:  # Commenting is best effort.
+        print(f"::warning::Couldn't update the share_url comment: {annotation(str(error))}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(required=True)
@@ -634,6 +701,10 @@ def main() -> int:
     notes = commands.add_parser("notes", help="print the changelog section for a bot's current version")
     notes.add_argument("slug")
     notes.set_defaults(run=cmd_notes)
+    comment = commands.add_parser("share-url-comment", help="comment on a pull request about the share_url problems in a check's log")
+    comment.add_argument("log", help="file with the check's output")
+    comment.add_argument("--sha", help="the commit the check ran on")
+    comment.set_defaults(run=cmd_share_url_comment)
     args = parser.parse_args()
     try:
         return args.run(args)
