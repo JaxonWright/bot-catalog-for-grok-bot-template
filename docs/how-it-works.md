@@ -68,7 +68,7 @@ The template owns the paths listed in `template_paths` in `catalog.toml`. Every 
 
 ## A new bot needs its share link before it can merge
 
-A new bot's check fails until `bot.toml` has a `share_url`. The link must open a Grok Bot set up from the branch's own bundle, so you publish the bot from inside the pull request.
+A new bot's check fails until `bot.toml` has a `share_url`. The link must open a Grok Bot set up from the branch's own bundle, so you publish the bot from inside the pull request. Until then, CI keeps one comment on the pull request that names the bot and the fix, and marks it resolved once the link is in.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="diagrams/sharing-dark.svg">
